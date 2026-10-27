@@ -1,7 +1,7 @@
 import { MAP, isWalkable } from './geometry.ts';
 import { LEVELS, type Level, type Spawn } from './levels.ts';
 export type Kind = 'warrior'|'archer'|'lancer'|'monk'|'goblin'|'spider'|'shaman'|'troll'|'bat'|'batBoss'|'bear'|'minotaur'|'hexBoss'|'gnoll'|'skull'|'spear';
-export const RULES={vision:180,healVision:200,towerRange:125,energyRegen:.6,bossTime:88,bossRadius:95,bossWindup:1.4,maxAllies:10,spawnSafetyRadius:26} as const;
+export const RULES={vision:180,healVision:200,towerRange:125,energyRegen:.6,bossRadius:95,bossWindup:1.4,maxAllies:10,spawnSafetyRadius:26} as const;
 type Spec = { name:string; hp:number; speed:number; damage:number; range:number; interval:number; cost:number; size:number };
 export const specs:Record<Kind,Spec> = {
  warrior:{name:'战士',hp:210,speed:43,damage:30,range:30,interval:0.85,cost:3,size:192},
@@ -21,7 +21,7 @@ export const specs:Record<Kind,Spec> = {
  skull:{name:'骷髅',hp:95,speed:48,damage:17,range:27,interval:.9,cost:0,size:192},
  spear:{name:'长矛哥布林',hp:130,speed:38,damage:21,range:40,interval:1,cost:0,size:256}
 };
-export interface Unit { id:number; kind:Kind; team:'ally'|'enemy'; x:number;y:number;hp:number;cooldown:number; flash:number; windup:number; special:number; action:'idle'|'move'|'attack'; actionTime:number; facing:number; lane:0|1; specialX?:number; specialY?:number }
+export interface Unit { id:number; kind:Kind; team:'ally'|'enemy'; x:number;y:number;hp:number;maxHp:number;waveUnit:boolean;cooldown:number; flash:number; windup:number; special:number; action:'idle'|'move'|'attack'; actionTime:number; facing:number; lane:0|1; specialX?:number; specialY?:number }
 export interface Tower {id:string;team:'ally'|'enemy';x:number;y:number;hp:number;maxHp:number;cooldown:number}
 export type CombatEvent={type:'hit'|'heal'|'death'|'boss'|'spawn'|'towerDown'|'shield';x:number;y:number;fromX?:number;fromY?:number;amount?:number;ranged?:boolean;towerId?:string};
 export const schedule:Spawn[]=LEVELS[0].waves;
@@ -30,9 +30,10 @@ export class Battle {
  readonly level:Level;
  constructor(level:Level=LEVELS[0]){this.level=level}
  towers:Tower[]=[{id:'a1',team:'ally',x:MAP.bridges[0],y:MAP.allyTowerY,hp:350,maxHp:350,cooldown:0},{id:'a2',team:'ally',x:MAP.bridges[1],y:MAP.allyTowerY,hp:350,maxHp:350,cooldown:0},{id:'e1',team:'enemy',x:MAP.bridges[0],y:MAP.enemyTowerY,hp:250,maxHp:250,cooldown:0},{id:'e2',team:'enemy',x:MAP.bridges[1],y:MAP.enemyTowerY,hp:250,maxHp:250,cooldown:0}];
- units:Unit[]=[]; pendingSpawns:Spawn[]=[]; events:CombatEvent[]=[]; time=0; energy=7; base=600; maxBase=600; enemyBase=700; maxEnemyBase=700; bossSpawned=false; bossDefeated=false; shieldLethalPending=false; selected:Kind='warrior'; status:'playing'|'paused'|'won'|'lost'='playing'; next=0; id=0; message='选择卡牌，再点击金色虚线范围'; messageTime=5;
+ units:Unit[]=[]; pendingSpawns:Spawn[]=[]; events:CombatEvent[]=[]; time=0; energy=7; base=600; maxBase=600; enemyBase=700; maxEnemyBase=700; bossTriggered=false; bossSpawned=false; bossDefeated=false; waveKills=0; shieldLethalPending=false; selected:Kind='warrior'; status:'playing'|'paused'|'won'|'lost'='playing'; next=0; id=0; message='选择卡牌，再点击金色虚线范围'; messageTime=5;
  walkable(x:number,y:number,team?:'ally'|'enemy'){return isWalkable(x,y)&&!(team==='ally'&&Math.hypot(x-MAP.spawnX,y-MAP.spawnY)<RULES.spawnSafetyRadius)&&!this.towers.some(t=>t.hp>0&&Math.hypot(t.x-x,t.y-y)<32)}
- spawn(kind:Kind,team:'ally'|'enemy',x:number,y:number,lane:0|1=x<MAP.campX?0:1){const u:Unit={id:++this.id,kind,team,x,y,hp:specs[kind].hp,cooldown:0,flash:0,windup:0,special:kind===this.level.boss?2:7,action:'idle',actionTime:0,facing:team==='ally'?1:-1,lane};this.units.push(u);return u}
+ spawn(kind:Kind,team:'ally'|'enemy',x:number,y:number,lane:0|1=x<MAP.campX?0:1,waveUnit=false){const maxHp=Math.round(specs[kind].hp*(team==='enemy'?this.level.hpMultiplier:1));const u:Unit={id:++this.id,kind,team,x,y,hp:maxHp,maxHp,waveUnit,cooldown:0,flash:0,windup:0,special:kind===this.level.boss?2:7,action:'idle',actionTime:0,facing:team==='ally'?1:-1,lane};this.units.push(u);if(team==='enemy'&&kind===this.level.boss)this.bossSpawned=true;return u}
+ damage(u:Unit,amount:number){return Math.round(amount*(u.team==='enemy'?this.level.damageMultiplier:1))}
  placementProblem(x:number,y:number):string|null{
   if(this.status!=='playing')return '战斗未进行';
   if(x<MAP.deployLeft||x>MAP.deployRight||y<MAP.deployTop||y>MAP.deployBottom||!isWalkable(x,y))return '请在金色虚线范围内部署';
@@ -50,8 +51,8 @@ export class Battle {
  }
  notice(s:string){this.message=s;this.messageTime=2}
  attack(u:Unit,target:Unit){const s=specs[u.kind];u.cooldown=s.interval;u.actionTime=.45;u.facing=target.x<u.x?-1:1;
- if(u.kind==='monk'){const healed=Math.min(s.damage,specs[target.kind].hp-target.hp);target.hp+=healed;this.events.push({type:'heal',x:target.x,y:target.y,fromX:u.x,fromY:u.y,amount:healed})}
- else{target.hp-=s.damage;target.flash=.18;this.events.push({type:'hit',x:target.x,y:target.y,fromX:u.x,fromY:u.y,amount:s.damage,ranged:s.range>60})}}
+ if(u.kind==='monk'){const healed=Math.min(s.damage,target.maxHp-target.hp);target.hp+=healed;this.events.push({type:'heal',x:target.x,y:target.y,fromX:u.x,fromY:u.y,amount:healed})}
+ else{const damage=this.damage(u,s.damage);target.hp-=damage;target.flash=.18;this.events.push({type:'hit',x:target.x,y:target.y,fromX:u.x,fromY:u.y,amount:damage,ranged:s.range>60})}}
  move(u:Unit,tx:number,ty:number,dt:number){
  // Align with a bridge before entering the horizontal river, including targets on a bridge.
  const destinationY=ty;
@@ -92,12 +93,19 @@ export class Battle {
   if(target){target.hp-=14;target.flash=.18;tower.cooldown=1.1;this.events.push({type:'hit',x:target.x,y:target.y,fromX:tower.x,fromY:tower.y,amount:14,ranged:true,towerId:tower.id})}
  }
  while(this.next<this.level.waves.length&&this.time>=this.level.waves[this.next].time)this.pendingSpawns.push(this.level.waves[this.next++]);
- // One shared spawn point just in front of the enemy base; defer when occupied.
- if(this.pendingSpawns.length&&this.walkable(MAP.spawnX,MAP.spawnY)&&!this.units.some(u=>u.hp>0&&Math.hypot(u.x-MAP.spawnX,u.y-MAP.spawnY)<(u.team==='enemy'?30:24))){
-  const e=this.pendingSpawns.shift()!;this.spawn(e.kind,'enemy',MAP.spawnX,MAP.spawnY,e.lane);
-  this.events.push({type:'spawn',x:MAP.spawnX,y:MAP.spawnY});
-  if(e.kind===this.level.boss){this.bossSpawned=true;this.notice(`${this.level.bossName}来袭！击败首领解除主城护盾`);}
+ // Boss is driven by the battle, never by a timer, and takes priority in the queue.
+ if(!this.bossTriggered&&!this.bossDefeated&&(this.waveKills>=this.level.bossKills||this.towers.some(t=>t.team==='enemy'&&t.hp<=0))){
+  this.bossTriggered=true;this.notice(`${this.level.bossName}即将来袭！`);
  }
+ if(this.bossTriggered&&!this.bossSpawned&&!this.bossDefeated){
+  const candidates=[[MAP.spawnX,MAP.spawnY],[200,165],[280,165],[240,185],[200,205],[280,205]];
+  const point=candidates.find(([x,y])=>this.walkable(x,y,'enemy')&&!this.units.some(u=>u.hp>0&&Math.hypot(u.x-x,u.y-y)<30));
+  if(point){const [x,y]=point;this.spawn(this.level.boss,'enemy',x,y,0);this.bossSpawned=true;this.events.push({type:'spawn',x,y});this.notice(`${this.level.bossName}来袭！击败首领解除主城护盾`)}
+ }else if(this.pendingSpawns.length&&this.walkable(MAP.spawnX,MAP.spawnY)&&!this.units.some(u=>u.hp>0&&Math.hypot(u.x-MAP.spawnX,u.y-MAP.spawnY)<(u.team==='enemy'?30:24))){
+  const e=this.pendingSpawns.shift()!;this.spawn(e.kind,'enemy',MAP.spawnX,MAP.spawnY,e.lane,true);
+  this.events.push({type:'spawn',x:MAP.spawnX,y:MAP.spawnY});
+ }
+
  for(const u of this.units){if(u.hp<=0)continue;const s=specs[u.kind];u.cooldown-=dt;u.flash=Math.max(0,u.flash-dt);u.actionTime=Math.max(0,u.actionTime-dt);u.action='idle';
  if(u.kind===this.level.boss&&u.team==='enemy'){
   u.special-=dt;
@@ -112,10 +120,10 @@ export class Battle {
      }
     }else{
      if(u.kind==='bear'||u.kind==='minotaur'){for(let i=0;i<18;i++)this.move(u,x,y,.06)}
-     const center=u.kind==='hexBoss'?{x,y}:u;const radius=u.kind==='hexBoss'?60:95;
-     for(const a of this.units)if(a.team==='ally'&&a.hp>0&&distance(a,center)<radius){a.hp-=u.kind==='hexBoss'?65:80;a.flash=.2;this.events.push({type:'hit',x:a.x,y:a.y,amount:u.kind==='hexBoss'?65:80})}
-     for(const t of this.towers)if(t.team==='ally'&&t.hp>0&&distance(t,center)<radius){t.hp=Math.max(0,t.hp-80);this.events.push({type:'hit',x:t.x,y:t.y,amount:80})}
-     if(distance(center,{x:MAP.baseX,y:MAP.baseY})<MAP.baseKeepOut+radius-35)this.base-=80;
+     const center=u.kind==='hexBoss'?{x,y}:u;const radius=u.kind==='hexBoss'?60:95;const skillDamage=this.damage(u,u.kind==='hexBoss'?65:80);
+     for(const a of this.units)if(a.team==='ally'&&a.hp>0&&distance(a,center)<radius){a.hp-=skillDamage;a.flash=.2;this.events.push({type:'hit',x:a.x,y:a.y,amount:skillDamage})}
+     for(const t of this.towers)if(t.team==='ally'&&t.hp>0&&distance(t,center)<radius){t.hp=Math.max(0,t.hp-skillDamage);this.events.push({type:'hit',x:t.x,y:t.y,amount:skillDamage})}
+     if(distance(center,{x:MAP.baseX,y:MAP.baseY})<MAP.baseKeepOut+radius-35)this.base-=skillDamage;
      this.events.push({type:'boss',x:center.x,y:center.y});
     }
     u.special=9;
@@ -128,7 +136,7 @@ export class Battle {
    u.specialX=target?.x??u.x;u.specialY=target?.y??u.y;u.windup=RULES.bossWindup;this.notice(`${this.level.bossName}正在施展${this.level.skill}！`);continue
   }
  }
- if(u.kind==='monk'){const injured=this.units.filter(v=>v.team==='ally'&&v.hp>0&&v.hp<specs[v.kind].hp&&v.id!==u.id&&distance(u,v)<=RULES.healVision).sort((a,b)=>distance(u,a)-distance(u,b))[0];
+ if(u.kind==='monk'){const injured=this.units.filter(v=>v.team==='ally'&&v.hp>0&&v.hp<v.maxHp&&v.id!==u.id&&distance(u,v)<=RULES.healVision).sort((a,b)=>distance(u,a)-distance(u,b))[0];
  if(injured){if(distance(u,injured)<=s.range){if(u.cooldown<=0)this.attack(u,injured)}else if(this.move(u,injured.x,injured.y,dt))u.action='move'}
  else{const ally=this.units.filter(v=>v.team==='ally'&&v.hp>0&&v.kind!=='monk').sort((a,b)=>distance(u,a)-distance(u,b))[0];
   if(ally&&distance(u,ally)>s.range*.8&&this.move(u,ally.x,ally.y,dt))u.action='move'}
@@ -142,14 +150,14 @@ export class Battle {
   else if(this.move(u,target.x,target.y,dt))u.action='move';
  }else if(towerTarget){
   if(distance(u,towerTarget)<=s.range+32){
-   if(u.cooldown<=0){towerTarget.hp=Math.max(0,towerTarget.hp-s.damage);u.cooldown=s.interval;u.actionTime=.45;u.facing=towerTarget.x<u.x?-1:1;this.events.push({type:'hit',x:towerTarget.x,y:towerTarget.y,fromX:u.x,fromY:u.y,amount:s.damage,ranged:s.range>60})}
+   if(u.cooldown<=0){const damage=this.damage(u,s.damage);towerTarget.hp=Math.max(0,towerTarget.hp-damage);u.cooldown=s.interval;u.actionTime=.45;u.facing=towerTarget.x<u.x?-1:1;this.events.push({type:'hit',x:towerTarget.x,y:towerTarget.y,fromX:u.x,fromY:u.y,amount:damage,ranged:s.range>60})}
   }else if(this.move(u,towerTarget.x,towerTarget.y,dt))u.action='move';
  }else{
   const base=u.team==='enemy'?{x:MAP.baseX,y:MAP.baseY,radius:MAP.baseKeepOut}:{x:MAP.campX,y:MAP.campY,radius:MAP.campKeepOut};
   if(distance(u,base)<=s.range+base.radius){
    if(u.cooldown<=0){
     let applied:number;
-    if(u.team==='enemy'){const previous=this.base;this.base=Math.max(0,this.base-s.damage);applied=previous-this.base}
+    if(u.team==='enemy'){const previous=this.base;this.base=Math.max(0,this.base-this.damage(u,s.damage));applied=previous-this.base}
     else{
      const minimum=this.bossDefeated?0:1;
      const previous=this.enemyBase;this.enemyBase=Math.max(minimum,this.enemyBase-s.damage);applied=previous-this.enemyBase;
@@ -167,6 +175,7 @@ export class Battle {
  }
  for(const u of this.units)if(u.hp<=0){
   this.events.push({type:'death',x:u.x,y:u.y});
+  if(u.team==='enemy'&&u.waveUnit)this.waveKills++;
   if(u.kind===this.level.boss&&u.team==='enemy'){
    this.bossDefeated=true;
    this.shieldLethalPending=false;this.notice(`${this.level.bossName}已被击败，主城护盾解除！`);

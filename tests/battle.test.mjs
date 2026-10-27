@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { Battle, RULES, schedule, specs } from '../src/battle.ts';
 import { isWalkable, MAP } from '../src/geometry.ts';
 import { LEVELS,loadProgress,loadCompletion,saveProgress } from '../src/levels.ts';
+import { BUILDINGS } from '../src/buildings.ts';
+import { existsSync } from 'node:fs';
 
 test('lower deployment validates region, energy and occupancy',()=>{
  const b=new Battle();b.deploy(135,200);assert.equal(b.units.length,0);
@@ -26,7 +28,7 @@ test('monk approaches and heals an injured ally',()=>{
  assert.ok(monk.x!==180||monk.y!==550);assert.ok(ally.hp>specs.warrior.hp-90);assert.ok(b.events.some(e=>e.type==='heal'));
 });
 test('monk follows a healthy ally outside healing vision and then heals',()=>{
- const b=new Battle();b.next=schedule.length;b.towers.forEach(t=>t.hp=0);
+ const b=new Battle();b.next=schedule.length;b.bossSpawned=true;b.towers.forEach(t=>t.hp=0);
  const monk=b.spawn('monk','ally',135,550),ally=b.spawn('warrior','ally',135,240);
  for(let i=0;i<200;i++)b.update(.05);
  assert.ok(monk.y<400,`monk did not follow: ${monk.x},${monk.y}`);
@@ -150,10 +152,10 @@ test('enemies leaving the central spawn can pass their own towers on either lane
 test('far-away enemies do not pull a unit away from a nearby tower',()=>{
  const b=new Battle(),archer=b.spawn('archer','ally',100,245),distant=b.spawn('goblin','enemy',310,245);
  const tower=b.towers.find(t=>t.id==='e1'),before=tower.hp;
- b.update(.05);assert.ok(tower.hp<before);assert.equal(distant.hp,specs.goblin.hp);
+ b.update(.05);assert.ok(tower.hp<before);assert.equal(distant.hp,distant.maxHp);
 });
 test('boss shield prevents early victory and opens after the boss dies',()=>{
- const b=new Battle();b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);
+ const b=new Battle();b.bossSpawned=true;b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);
  b.enemyBase=10;const archer=b.spawn('archer','ally',135,160);b.update(.05);
  assert.equal(b.enemyBase,1);assert.equal(b.status,'playing');assert.equal(b.bossDefeated,false);
  assert.ok(b.events.some(e=>e.type==='shield'));assert.ok(b.events.some(e=>e.type==='hit'&&e.amount===9));
@@ -193,7 +195,7 @@ test('an all-melee siege cannot indefinitely block the boss wave',()=>{
  assert.equal(b.status,'won');
 });
 test('shielded base requires a new attack after the boss dies',()=>{
- const b=new Battle();b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);
+ const b=new Battle();b.bossSpawned=true;b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);
  b.enemyBase=10;b.spawn('archer','ally',135,160);b.update(.05);
  assert.equal(b.enemyBase,1);assert.equal(b.shieldLethalPending,true);assert.equal(b.status,'playing');
  const boss=b.spawn('troll','enemy',300,160);boss.hp=0;b.update(.05);
@@ -213,7 +215,7 @@ test('each configured level can finish with a deployed army',()=>{
  for(const level of LEVELS){
   const b=new Battle(level);let nextDeploy=0;
   while(b.status==='playing'&&b.time<240){
-   if(b.time>=nextDeploy){b.selected=Math.floor(nextDeploy/4)%4===0?'lancer':'archer';b.deploy(Math.floor(nextDeploy/4)%2?135:345,480);nextDeploy+=4}
+   if(b.time>=nextDeploy){b.selected=Math.floor(nextDeploy/3)%2?'monk':'lancer';b.deploy(Math.floor(nextDeploy/3)%2?135:345,480);nextDeploy+=3}
    b.update(.05);b.events.length=0;
   }
   assert.equal(b.status,'won',`${level.name} did not finish`);assert.ok(b.bossSpawned&&b.bossDefeated);assert.equal(b.enemyBase,0);
@@ -222,7 +224,7 @@ test('each configured level can finish with a deployed army',()=>{
 test('every level has its own boss, valid waves, shield, and a fresh battle',()=>{
  assert.equal(new Set(LEVELS.map(l=>l.boss)).size,5);
  for(const level of LEVELS){
-  const b=new Battle(level);assert.equal(b.level,level);assert.equal(level.waves.filter(w=>w.kind===level.boss).length,1);
+  const b=new Battle(level);assert.equal(b.level,level);assert.equal(level.waves.filter(w=>w.kind===level.boss).length,0);
   b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);b.enemyBase=1;
   const boss=b.spawn(level.boss,'enemy',300,160);boss.hp=0;b.update(.05);
   assert.equal(b.bossDefeated,true);assert.equal(b.status,'playing');assert.equal(b.enemyBase,1);
@@ -238,6 +240,42 @@ test('each boss telegraphs its skill and performs the configured effect',()=>{
   if(level.boss==='batBoss')assert.ok(b.units.some(u=>u.kind==='bat'),level.name);
   else assert.ok(b.events.some(e=>e.type==='boss'),level.name);
  }
+});
+test('boss appears on wave kills or tower destruction, never just elapsed time',()=>{
+ for(const level of LEVELS){
+  const b=new Battle(level);b.next=level.waves.length;b.update(300);assert.equal(b.bossSpawned,false,level.name);
+  const summoned=b.spawn('spider','enemy',300,250,0,false);summoned.hp=0;b.update(.01);assert.equal(b.waveKills,0);
+  for(let i=0;i<level.bossKills;i++){const u=b.spawn('spider','enemy',300,250,0,true);u.hp=0;b.update(.01)}
+  assert.equal(b.waveKills,level.bossKills);b.update(.01);assert.equal(b.bossSpawned,true);
+  const boss=b.units.find(u=>u.kind===level.boss);assert.ok(boss);boss.hp=0;b.update(.01);b.update(.01);
+  assert.ok(b.bossDefeated);assert.equal(b.units.filter(u=>u.kind===level.boss).length,0);
+  const c=new Battle(level);c.next=level.waves.length;c.towers.find(t=>t.team==='enemy').hp=0;c.update(.01);
+  assert.ok(c.bossSpawned,'tower destruction triggers boss');
+ }
+});
+test('boss takes queue priority and uses a free spawn when the central point is blocked',()=>{
+ const b=new Battle();b.next=b.level.waves.length;b.pendingSpawns.push(b.level.waves[0]);
+ b.spawn('goblin','enemy',MAP.spawnX,MAP.spawnY);b.towers.find(t=>t.team==='enemy').hp=0;b.update(.01);
+ const boss=b.units.find(u=>u.kind===b.level.boss);assert.ok(boss);assert.notEqual(boss.x,MAP.spawnX);
+ assert.equal(b.pendingSpawns.length,1);assert.ok(b.walkable(boss.x,boss.y,'enemy'));
+});
+test('a fully blocked boss waits, then spawns once without consuming the normal wave queue',()=>{
+ const b=new Battle();b.next=b.level.waves.length;b.pendingSpawns.push(b.level.waves[0]);
+ const positions=[[MAP.spawnX,MAP.spawnY],[200,165],[280,165],[240,185],[200,205],[280,205]];
+ const blockers=positions.map(([x,y])=>b.spawn('goblin','enemy',x,y));
+ b.towers.find(t=>t.team==='enemy').hp=0;b.update(.001);
+ assert.equal(b.bossTriggered,true);assert.equal(b.bossSpawned,false);assert.equal(b.pendingSpawns.length,1);
+ blockers[2].hp=0;b.update(.001);b.update(.001);
+ assert.equal(b.units.filter(u=>u.kind===b.level.boss).length,1);assert.equal(b.pendingSpawns.length,1);
+});
+test('enemy health and damage scale by level while allies stay unchanged',()=>{
+ for(const level of LEVELS){const b=new Battle(level),enemy=b.spawn('goblin','enemy',100,250),ally=b.spawn('warrior','ally',100,275);
+  assert.equal(enemy.maxHp,Math.round(specs.goblin.hp*level.hpMultiplier));assert.equal(ally.maxHp,specs.warrior.hp);
+  const before=ally.hp;b.attack(enemy,ally);assert.equal(before-ally.hp,Math.round(specs.goblin.damage*level.damageMultiplier));
+ }
+ assert.deepEqual(LEVELS.map(l=>l.waves.length),[15,17,19,21,23]);
+ assert.equal(BUILDINGS.length,5);assert.equal(new Set(BUILDINGS.map(t=>t.camp)).size,5);assert.equal(new Set(BUILDINGS.map(t=>t.tower)).size,5);
+ for(const theme of BUILDINGS)for(const key of [theme.camp,theme.campRuin,theme.tower,theme.ruin])assert.ok(existsSync(new URL(`../public/assets/${key}.png`,import.meta.url)),`missing ${key}`);
 });
 test('boss death does not damage the base without a pending lethal strike',()=>{
  const b=new Battle();b.enemyBase=1;const boss=b.spawn('troll','enemy',300,160);boss.hp=0;b.update(.05);

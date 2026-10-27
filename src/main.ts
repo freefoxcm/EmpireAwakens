@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import {Battle,RULES,specs,type Kind,type Unit,type CombatEvent} from './battle';
 import {MAP} from './geometry';
+import {BUILDINGS} from './buildings';
 import {LEVELS,loadProgress,loadCompletion,saveProgress} from './levels';
 import './style.css';
 const app=document.querySelector<HTMLDivElement>('#app')!;
-app.innerHTML=`<main class="shell"><div class="arena"><section class="game-frame"><div id="game"></div><div class="top-hud"><div class="wave-stat"><span id="level-name">边境警戒</span><strong id="wave">第一波 · 试探</strong></div><div class="battle-clock"><span>战斗时间</span><strong id="timer">00:00</strong><button id="help" class="small-btn help-btn" aria-label="战斗规则">?</button><button id="pause" class="small-btn" aria-label="暂停游戏">Ⅱ</button></div></div><div class="enemy-base-stat"><span id="enemy-label">首领护盾</span><strong id="enemy-base">700 / 700</strong><div class="bar"><i id="enemy-base-bar"></i></div></div><div class="base-stat"><span>我方据点</span><strong id="base">600 / 600</strong><div class="bar"><i id="base-bar"></i></div></div><div id="boss-hud" class="boss-hud hidden"><span id="boss-name">巨魔</span><div class="bar"><i id="boss-bar"></i></div></div><div id="hint" class="hint" role="status" aria-live="polite">选择卡牌，再点击金色虚线范围</div><div id="rules" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div class="modal rules-modal"><h2 id="rules-title">战斗规则</h2><p>部署部队守住兵营，箭塔守卫会自动攻击附近敌人；点击箭塔可查看射程。战斗单位优先攻击附近敌军，再推进攻击箭塔和主城。</p><p>修士会治疗附近友军；场上最多部署 10 名部队。首领技能会显示预警，击败首领才能解除敌方主城护盾；摧毁敌方主城才能获胜。</p><button id="close-rules">继续战斗</button></div></div><div id="overlay" class="overlay hidden"><div class="modal"><span class="eyebrow">BATTLE REPORT</span><h2 id="result-title"></h2><p id="result-text"></p><div class="result-actions"><button id="restart">再战一次</button><button id="next-level" class="hidden">下一关</button><button id="back-map">返回地图</button></div></div></div></section><section class="controls"><div class="deck-title"><span>部署部队</span><span id="selection">已选：战士</span></div><div id="cards" class="cards"></div><div class="energy-row"><span class="energy-label">✦ 能量 <strong id="energy">7.0</strong><span class="muted"> / 10</span></span><span>自动恢复</span></div><div class="energy-track"><i id="energy-bar"></i></div><p class="instruction">选择卡牌，点击金色虚线范围部署 · 1–4 切换 · 空格暂停</p></section><div id="title-screen" class="campaign-screen title-screen"><div class="title-content"><p class="campaign-kicker">A PIXEL STRATEGY ADVENTURE</p><h1>帝国觉醒<br><em>战鼓再起</em></h1><p class="title-subtitle">集结部队 · 守卫边境 · 向敌军进发</p><button id="start-game" class="campaign-button">开始游戏</button></div></div><div id="map-screen" class="campaign-screen map-screen hidden"><div class="map-heading"><span>征途地图</span><button id="back-title" class="map-back">返回</button></div><div class="map-art"><div id="map-nodes" class="map-nodes"></div></div><div class="map-detail"><p id="map-region"></p><h2 id="map-level-name"></h2><p id="map-description"></p><p id="map-boss"></p><button id="enter-level" class="campaign-button">进入战斗</button></div></div></div></main>`;
+app.innerHTML=`<main class="shell"><div class="arena"><section class="game-frame"><div id="game"></div><div class="top-hud"><div class="wave-stat"><span id="level-name">边境警戒</span><strong id="wave">第一波 · 试探</strong></div><div class="battle-clock"><span>战斗时间</span><strong id="timer">00:00</strong><button id="help" class="small-btn help-btn" aria-label="战斗规则">?</button><button id="pause" class="small-btn" aria-label="暂停游戏">Ⅱ</button></div></div><div class="enemy-base-stat"><span id="enemy-label">首领护盾</span><strong id="enemy-base">700 / 700</strong><div class="bar"><i id="enemy-base-bar"></i></div></div><div class="base-stat"><span>我方据点</span><strong id="base">600 / 600</strong><div class="bar"><i id="base-bar"></i></div></div><div id="boss-hud" class="boss-hud hidden" role="progressbar" aria-label="首领生命值" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div class="bar"><i id="boss-bar"></i></div></div><div id="hint" class="hint" role="status" aria-live="polite">选择卡牌，再点击金色虚线范围</div><div id="rules" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div class="modal rules-modal"><h2 id="rules-title">战斗规则</h2><p>部署部队守住兵营，箭塔守卫会自动攻击附近敌人；点击箭塔可查看射程。战斗单位优先攻击附近敌军，再推进攻击箭塔和主城。</p><p>修士会治疗附近友军；场上最多部署 10 名部队。首领技能会显示预警，击败首领才能解除敌方主城护盾；摧毁敌方主城才能获胜。</p><button id="close-rules">继续战斗</button></div></div><div id="overlay" class="overlay hidden"><div class="modal"><span class="eyebrow">BATTLE REPORT</span><h2 id="result-title"></h2><p id="result-text"></p><div class="result-actions"><button id="restart">再战一次</button><button id="next-level" class="hidden">下一关</button><button id="back-map">返回地图</button></div></div></div></section><section class="controls"><div class="deck-title"><span>部署部队</span><span id="selection">已选：战士</span></div><div id="cards" class="cards"></div><div class="energy-row"><span class="energy-label">✦ 能量 <strong id="energy">7.0</strong><span class="muted"> / 10</span></span><span>自动恢复</span></div><div class="energy-track"><i id="energy-bar"></i></div><p class="instruction">选择卡牌，点击金色虚线范围部署 · 1–4 切换 · 空格暂停</p></section><div id="title-screen" class="campaign-screen title-screen"><div class="title-content"><p class="campaign-kicker">A PIXEL STRATEGY ADVENTURE</p><h1>帝国觉醒<br><em>战鼓再起</em></h1><p class="title-subtitle">集结部队 · 守卫边境 · 向敌军进发</p><button id="start-game" class="campaign-button">开始游戏</button></div></div><div id="map-screen" class="campaign-screen map-screen hidden"><div class="map-heading"><span>征途地图</span><button id="back-title" class="map-back">返回</button></div><div class="map-art"><div id="map-nodes" class="map-nodes"></div></div><div class="map-detail"><p id="map-region"></p><h2 id="map-level-name"></h2><p id="map-description"></p><p id="map-boss"></p><button id="enter-level" class="campaign-button">进入战斗</button></div></div></div></main>`;
 
 const $=(s:string)=>document.querySelector<HTMLElement>(s)!;
 let selectedLevel=1;let unlocked=1;let completed=0;try{unlocked=loadProgress(window.localStorage);completed=loadCompletion(window.localStorage)}catch{}
@@ -21,7 +22,7 @@ $('#close-rules').addEventListener('click',()=>{if(resumeAfterRules&&battle.stat
 $('#pause').addEventListener('click',pause);
 function showMap(){screen='map';battle.status='paused';$('.game-frame').inert=true;$('.controls').inert=true;$('#overlay').classList.add('hidden');$('#title-screen').classList.add('hidden');$('#map-screen').classList.remove('hidden');renderMap()}
 function renderMap(){
- $('#map-nodes').innerHTML=LEVELS.map(level=>`<button class="map-node node-${level.id} ${level.id===selectedLevel?'active':''} ${level.id<=completed?'completed':''}" data-level="${level.id}" ${level.id>unlocked?'disabled':''} aria-label="${level.id>unlocked?'未解锁：':level.id<=completed?'已通关：':''}第${level.id}关 ${level.name}"><span>${level.id>unlocked?'🔒':level.id}</span></button>`).join('');
+ $('#map-nodes').innerHTML=LEVELS.map(level=>`<button class="map-node node-${level.id} ${level.id===selectedLevel?'active':''} ${level.id<=completed?'completed':''}" data-level="${level.id}" ${level.id>unlocked?'disabled':''} aria-label="${level.id>unlocked?'未解锁：':level.id<=completed?'已通关：':''}第${level.id}关 ${level.name}"><span class="landmark" aria-hidden="true"></span><span class="node-badge" aria-hidden="true">${level.id>unlocked?'🔒':level.id}</span></button>`).join('');
  document.querySelectorAll<HTMLButtonElement>('.map-node').forEach(button=>button.addEventListener('click',()=>{selectedLevel=Number(button.dataset.level);renderMap()}));
  const level=LEVELS[selectedLevel-1];$('#map-region').textContent=`第 ${level.id} 关 · ${level.region}`;$('#map-level-name').textContent=level.name;$('#map-description').textContent=level.description;$('#map-boss').textContent=`首领：${level.bossName} · ${level.skill}`;
 }
@@ -35,10 +36,10 @@ $('#next-level').addEventListener('click',()=>startLevel(selectedLevel+1));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#rules').classList.contains('hidden')){$('#close-rules').click();return}if(screen!=='battle')return;if(e.code==='Space'){if(e.target instanceof HTMLButtonElement)return;e.preventDefault();pause()}const n=Number(e.key);if(n>=1&&n<=4)select(cards[n-1])});
 function renderHud(){
  $('#enemy-label').textContent=battle.bossDefeated?'敌方主城':'首领护盾';$('#enemy-base').textContent=`${Math.ceil(battle.enemyBase)} / ${battle.maxEnemyBase}`;$('#enemy-base-bar').style.width=`${battle.enemyBase/battle.maxEnemyBase*100}%`;$('#base').textContent=`${Math.ceil(battle.base)} / ${battle.maxBase}`;$('#base-bar').style.width=`${battle.base/battle.maxBase*100}%`;$('#energy').textContent=battle.energy.toFixed(1);$('#energy-bar').style.width=`${battle.energy*10}%`;$('#selection').textContent=`已选：${specs[battle.selected].name} · 部队 ${battle.units.filter(u=>u.team==='ally'&&u.hp>0).length}/${RULES.maxAllies}`;
- $('#level-name').textContent=battle.level.name;$('#timer').textContent=`${String(Math.floor(battle.time/60)).padStart(2,'0')}:${String(Math.floor(battle.time%60)).padStart(2,'0')}`;$('#wave').textContent=battle.time<30?'第一波 · 试探':battle.time<54?'第二波 · 集结':battle.time<RULES.bossTime?'第三波 · 猛攻':'最终波 · 首领';
+ $('#level-name').textContent=battle.level.name;$('#timer').textContent=`${String(Math.floor(battle.time/60)).padStart(2,'0')}:${String(Math.floor(battle.time%60)).padStart(2,'0')}`;$('#wave').textContent=battle.bossTriggered?(battle.bossDefeated?'首领已击败':'首领来袭'):battle.next<Math.ceil(battle.level.waves.length/3)?'第一波 · 试探':battle.next<Math.ceil(battle.level.waves.length*2/3)?'第二波 · 集结':'第三波 · 猛攻';
  $('#hint').textContent=battle.status==='paused'?'战斗已暂停':battle.message;$('#hint').classList.toggle('quiet',battle.status!=='paused'&&battle.messageTime<=0);$('#pause').textContent=battle.status==='paused'?'▶':'Ⅱ';$('#pause').setAttribute('aria-label',battle.status==='paused'?'继续游戏':'暂停游戏');
  document.querySelectorAll<HTMLButtonElement>('.card').forEach(b=>{const k=b.dataset.kind as Kind;b.classList.toggle('selected',k===battle.selected);b.setAttribute('aria-pressed',String(k===battle.selected));b.classList.toggle('poor',battle.energy<specs[k].cost)});
- const boss=battle.units.find(u=>u.kind===battle.level.boss&&u.team==='enemy');$('#boss-name').textContent=battle.level.bossName;$('#boss-hud').classList.toggle('hidden',!boss);if(boss)$('#boss-bar').style.width=`${Math.max(0,boss.hp/specs[boss.kind].hp*100)}%`;
+ const boss=battle.units.find(u=>u.kind===battle.level.boss&&u.team==='enemy');$('#boss-hud').classList.toggle('hidden',!boss);if(boss){const percent=Math.max(0,Math.min(100,boss.hp/boss.maxHp*100));$('#boss-bar').style.width=`${percent}%`;$('#boss-hud').setAttribute('aria-valuenow',String(Math.round(percent)))}
  if(screen==='battle'&&(battle.status==='won'||battle.status==='lost')&&!overlayShown){
   overlayShown=true;$('#overlay').classList.remove('hidden');const won=battle.status==='won';
   $('#result-title').textContent=won?'战斗胜利':'基地已失守';$('#result-text').textContent=won?`${battle.level.bossName}已被击败，敌方主城被摧毁。`:'调整部署时机和阵容，再试一次。';
@@ -49,14 +50,14 @@ function renderHud(){
 }
 
 class BattleScene extends Phaser.Scene {
- views=new Map<number,Phaser.GameObjects.Sprite>(); towerViews=new Map<string,Phaser.GameObjects.Image>(); towerArchers=new Map<string,Phaser.GameObjects.Sprite>(); terrainViews:Phaser.GameObjects.Image[]=[]; waterViews:Phaser.GameObjects.Image[]=[]; sceneryViews:Phaser.GameObjects.Sprite[]=[]; graphics!:Phaser.GameObjects.Graphics; preview!:Phaser.GameObjects.Graphics; rangeTower:string|null=null; rangeUntil=0; pausedVisuals=false;
+ views=new Map<number,Phaser.GameObjects.Sprite>(); towerViews=new Map<string,Phaser.GameObjects.Image>(); towerArchers=new Map<string,Phaser.GameObjects.Sprite>(); terrainViews:Phaser.GameObjects.Image[]=[]; waterViews:Phaser.GameObjects.Image[]=[]; sceneryViews:Phaser.GameObjects.Sprite[]=[]; campView!:Phaser.GameObjects.Image; graphics!:Phaser.GameObjects.Graphics; preview!:Phaser.GameObjects.Graphics; rangeTower:string|null=null; rangeUntil=0; pausedVisuals=false;
  constructor(){super('battle')}
  preload(){
   const asset=(name:string)=>`${import.meta.env.BASE_URL}assets/${name}.png`;
   for(const [k,s] of Object.entries(specs)){
    for(const action of ['move','idle','attack']) this.load.spritesheet(k+'-'+action,asset(`${k}${action==='move'?'':'-'+action}`),{frameWidth:s.size,frameHeight:s.size});
   }
-  for(const k of ['ground','water','barracks-rear','rock','terrain-flat','bridge','river','enemy-camp','tower-ally-rear','tower-ally-ruin','tower-enemy-ruin','tower-arrow'])this.load.image(k,asset(k));
+  for(const k of ['ground','water','barracks-rear','rock','terrain-flat','bridge','river','enemy-camp','tower-ally-rear','tower-ally-ruin','tower-enemy-ruin','tower-arrow','theme-forest-camp','theme-forest-tower','theme-forest-ruin','theme-shadow-camp','theme-shadow-tower','theme-shadow-ruin','theme-fort-camp','theme-fort-tower','theme-fort-ruin','theme-frontier-camp-ruin','theme-wild-tribal-camp','theme-wild-totem-tower','theme-wild-ruin','theme-fort-camp-ruin'])this.load.image(k,asset(k));
   this.load.spritesheet('deployment-dust',asset('deployment-dust'),{frameWidth:64,frameHeight:64});
   this.load.spritesheet('tower-enemy',asset('tower-enemy'),{frameWidth:256,frameHeight:192});
   this.load.spritesheet('tree',asset('tree'),{frameWidth:192,frameHeight:256});
@@ -105,7 +106,7 @@ class BattleScene extends Phaser.Scene {
   for(const [width,color,alpha] of [[4,0x403526,.65],[2,0xf4d891,.95]]){
    zone.lineStyle(width,color,alpha);for(const seg of segments)zone.lineBetween(seg.x1,seg.y1,seg.x2,seg.y2);
   }
-  this.add.image(MAP.campX,MAP.campY-8,'enemy-camp').setScale(.58).setDepth(MAP.campY);
+  this.campView=this.add.image(MAP.campX,MAP.campY-8,'enemy-camp').setScale(.58).setDepth(MAP.campY);
   this.add.image(MAP.baseX,MAP.baseY-28,'barracks-rear').setDisplaySize(192*.55,256*.55).setDepth(MAP.baseY);
   this.anims.create({key:'deployment-dust',frames:this.anims.generateFrameNumbers('deployment-dust',{start:0,end:7}),frameRate:18,repeat:0});
   this.anims.create({key:'tree-sway',frames:this.anims.generateFrameNumbers('tree',{start:0,end:7}),frameRate:5,repeat:-1});
@@ -139,12 +140,13 @@ class BattleScene extends Phaser.Scene {
    else{this.rangeTower=null;battle.deploy(p.x,p.y)}
   });
  }
- applyTheme(){this.terrainViews.forEach(v=>{v.setTexture('terrain-flat',battle.level.id===3?'arena-sand':'arena-grass');v.setTint(battle.level.terrain)});this.sceneryViews.forEach(v=>v.setTint(battle.level.terrain));this.waterViews.forEach(v=>v.setTint(battle.level.water))}
+ applyTheme(){const theme=BUILDINGS[battle.level.id-1];this.terrainViews.forEach(v=>{v.setTexture('terrain-flat',battle.level.id===3?'arena-sand':'arena-grass');v.setTint(battle.level.terrain)});this.sceneryViews.forEach(v=>v.setTint(battle.level.terrain));this.waterViews.forEach(v=>v.setTint(battle.level.water));this.campView.setTexture(theme.camp,theme.campFrame).setDisplaySize(theme.campWidth,theme.campHeight);for(const t of battle.towers.filter(t=>t.team==='enemy')){this.towerViews.get(t.id)!.setTexture(theme.tower,theme.towerFrame).setDisplaySize(theme.towerWidth,theme.towerHeight);this.towerArchers.get(t.id)!.setY(t.y-theme.guardOffset)}}
  resetViews(){this.views.forEach(v=>v.destroy());this.views.clear();this.rangeTower=null;this.tweens.killAll();this.towerArchers.forEach((v,id)=>{const t=battle.towers.find(t=>t.id===id);v.setVisible(true);v.play(t?.team==='ally'?'archer-idle':'shaman-idle')})}
  update(_t:number,delta:number){
   const paused=battle.status==='paused';
   if(paused!==this.pausedVisuals){this.pausedVisuals=paused;if(paused){this.anims.pauseAll();this.tweens.pauseAll()}else{this.anims.resumeAll();this.tweens.resumeAll()}}
   const dt=Math.min(delta/1000,.05);battle.update(dt);this.graphics.clear();this.preview.clear();
+  if(battle.enemyBase<=0){const theme=BUILDINGS[battle.level.id-1];if(this.campView.texture.key!==theme.campRuin)this.campView.setTexture(theme.campRuin).setDisplaySize(theme.campRuinWidth,theme.campRuinHeight)}
   if(this.rangeTower&&battle.time<this.rangeUntil&&battle.status==='playing'){
    const tower=battle.towers.find(t=>t.id===this.rangeTower&&t.hp>0);
    if(tower){this.preview.fillStyle(tower.team==='ally'?0x90ddc3:0xec927b,.07);this.preview.fillCircle(tower.x,tower.y,RULES.towerRange);this.preview.lineStyle(2,tower.team==='ally'?0xc9f1d2:0xffbfaa,.8);this.preview.strokeCircle(tower.x,tower.y,RULES.towerRange)}
@@ -152,8 +154,9 @@ class BattleScene extends Phaser.Scene {
   for(const tower of battle.towers){
    const view=this.towerViews.get(tower.id)!;
    this.towerArchers.get(tower.id)!.setVisible(tower.hp>0);
-   const key=tower.hp>0?(tower.team==='ally'?'tower-ally-rear':'tower-enemy'):(tower.team==='ally'?'tower-ally-ruin':'tower-enemy-ruin');
-   if(view.texture.key!==key){const wasAlive=view.texture.key==='tower-ally-rear'||view.texture.key==='tower-enemy';view.setTexture(key,key==='tower-enemy'?0:undefined);if(tower.team==='ally')view.setDisplaySize(128*.47,256*.47);if(wasAlive&&tower.hp<=0)this.showEvent({type:'towerDown',x:tower.x,y:tower.y})}
+   const theme=BUILDINGS[battle.level.id-1],aliveKey=tower.team==='ally'?'tower-ally-rear':theme.tower,ruinKey=tower.team==='ally'?'tower-ally-ruin':theme.ruin;
+   const key=tower.hp>0?aliveKey:ruinKey;
+   if(view.texture.key!==key){const wasAlive=view.texture.key===aliveKey;view.setTexture(key,tower.hp>0&&tower.team==='enemy'?theme.towerFrame:undefined);if(tower.team==='ally')view.setDisplaySize(128*.47,256*.47);else view.setDisplaySize(tower.hp>0?theme.towerWidth:theme.ruinWidth,tower.hp>0?theme.towerHeight:theme.ruinHeight);if(wasAlive&&tower.hp<=0)this.showEvent({type:'towerDown',x:tower.x,y:tower.y})}
    if(tower.hp>0){const g=this.graphics;g.fillStyle(0x172522,.85);g.fillRoundedRect(tower.x-24,tower.y-12,48,7,2);g.fillStyle(tower.team==='ally'?0x62d9d2:0xee8977);g.fillRoundedRect(tower.x-23,tower.y-11,46*tower.hp/tower.maxHp,5,2)}
   }
   for(const u of battle.units){if(u.windup>0){const aimed=u.kind==='hexBoss'||u.kind==='bear'||u.kind==='minotaur';const warningX=aimed?(u.specialX??u.x):u.x,warningY=aimed?(u.specialY??u.y):u.y,radius=u.kind==='hexBoss'?60:RULES.bossRadius;if(u.kind==='bear'||u.kind==='minotaur'){this.graphics.lineStyle(5,0xffc685,.85);this.graphics.lineBetween(u.x,u.y,warningX,warningY)}this.graphics.fillStyle(0xe94f3b,.27);this.graphics.fillCircle(warningX,warningY,radius);this.graphics.lineStyle(3,0xffc685,.95);this.graphics.strokeCircle(warningX,warningY,radius);this.graphics.lineStyle(4,0xffefc5,.95);this.graphics.beginPath();this.graphics.arc(warningX,warningY,radius-7,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-u.windup/RULES.bossWindup),false);this.graphics.strokePath()}this.drawUnit(u)}
@@ -169,7 +172,7 @@ class BattleScene extends Phaser.Scene {
   if(e.towerId&&e.fromX!==undefined&&e.fromY!==undefined){
    const tower=battle.towers.find(t=>t.id===e.towerId),archer=this.towerArchers.get(e.towerId);
    if(tower&&archer&&tower.hp>0){archer.setFlipX(e.x<e.fromX);archer.play(tower.team==='ally'?'archer-attack':'shaman-attack',true)}
-   const fromY=e.fromY-TOWER_GUARD_OFFSET;
+   const fromY=e.fromY-(tower?.team==='enemy'?BUILDINGS[battle.level.id-1].guardOffset:TOWER_GUARD_OFFSET);
    const shot=tower?.team==='enemy'?this.add.circle(e.fromX,fromY,5,0xd894ff).setStrokeStyle(2,0xffe0ff):this.add.image(e.fromX,fromY,'tower-arrow').setScale(.55).setRotation(Math.atan2(e.y-fromY,e.x-e.fromX));
    shot.setDepth(1002);
    this.tweens.add({targets:shot,x:e.x,y:e.y,duration:200,onComplete:()=>shot.destroy()});
@@ -182,7 +185,7 @@ class BattleScene extends Phaser.Scene {
   let v=this.views.get(u.id);if(!v){v=this.add.sprite(u.x,u.y,u.kind+'-idle');this.views.set(u.id,v)}
   const anim=u.kind+'-'+u.action;if(v.anims.currentAnim?.key!==anim)v.play(anim);
   v.setPosition(u.x,u.y);v.setDepth(u.y);v.setScale(u.kind==='troll'?.65:u.kind==='batBoss'?.85:u.kind==='bear'?.72:u.kind==='minotaur'?.65:u.kind==='hexBoss'?.85:u.kind==='lancer'?.50:u.kind==='goblin'||u.kind==='spear'?.46:.58);v.setFlipX(u.facing<0);v.setTint(u.flash>0?0xff9999:0xffffff);
-  const g=this.graphics;g.fillStyle(0x172522,.8);g.fillRoundedRect(u.x-20,u.y-35,40,5,2);g.fillStyle(u.team==='ally'?0x85d7c5:0xe87965);g.fillRoundedRect(u.x-20,u.y-35,40*Math.max(0,u.hp/specs[u.kind].hp),5,2)
+  const g=this.graphics;g.fillStyle(0x172522,.8);g.fillRoundedRect(u.x-20,u.y-35,40,5,2);g.fillStyle(u.team==='ally'?0x85d7c5:0xe87965);g.fillRoundedRect(u.x-20,u.y-35,40*Math.max(0,u.hp/u.maxHp),5,2)
  }
 }
 new Phaser.Game({type:Phaser.AUTO,parent:'game',width:MAP.width,height:MAP.height,backgroundColor:'#78945c',pixelArt:true,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:BattleScene});renderHud();

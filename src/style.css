@@ -121,3 +121,24 @@
 @media(max-height:700px){.title-content{padding:15px}.title-content h1{margin:10px 0;font-size:26px}.title-subtitle{margin-bottom:10px}.map-heading{padding:1px 10px}.map-back{min-height:32px}.map-detail{padding:3px 8px 4px}.map-detail h2{font-size:16px}.map-detail p{font-size:10px}.map-detail .campaign-button{min-height:36px}.map-node{width:36px;height:36px;font-size:15px}}
 @media(orientation:landscape) and (max-height:500px){.map-screen{display:grid;grid-template-columns:minmax(0,1fr) 172px;grid-template-rows:38px 1fr}.map-heading{grid-column:1 / 3}.map-art{height:100%}.map-detail{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border-top:0;border-left:3px solid #c5a772}.map-detail p{margin:5px 0}.title-content{max-width:360px}.modal{padding:10px}}
 .map-node.completed::after{content:"✓";position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;background:#4d9a70;border:1px solid #d9f1c8;color:#fff;font:700 12px/14px Arial}
+/* Keep only the boss life bar, without the decorative banner. */
+.boss-hud{padding:0;background:none;top:25%;left:30%;width:40%}
+.boss-hud .bar{height:9px}
+/* Place the enemy base bar below the building and between the two towers. */
+.enemy-base-stat{top:16%}
+/* Parchment campaign map with miniature location landmarks. */
+.map-art{background-image:url('/assets/parchment-map.png')}
+.map-node,.map-node.active{width:70px;height:70px;border:0;border-radius:0;background:none;box-shadow:none;filter:drop-shadow(0 2px 2px #442718aa)}
+.map-node .landmark{position:absolute;inset:0;background:center/contain no-repeat;image-rendering:pixelated}
+.map-node .node-badge{position:absolute;right:0;bottom:3px;min-width:21px;height:21px;padding:0 3px;border:2px solid #e5c67a;border-radius:50%;background:#486b5c;color:#fff6ce;font:700 12px/17px Arial;text-align:center;text-shadow:0 1px #263c2d}
+.map-node.active .node-badge{background:#c37a32;border-color:#fff0ac;box-shadow:0 0 0 2px #795322}
+.map-node:disabled{background:transparent;opacity:.8;filter:grayscale(.7) brightness(.72) drop-shadow(0 2px 2px #442718aa)}
+.map-node:disabled .node-badge{font-size:11px;background:#49453e}
+.node-1 .landmark{background-image:url('/assets/enemy-camp.png')}
+.node-2 .landmark{background-image:url('/assets/theme-forest-camp.png')}
+.node-3 .landmark{background-image:url('/assets/theme-wild-tribal-camp.png')}
+.node-4 .landmark{background-image:url('/assets/theme-shadow-camp.png')}
+.node-5 .landmark{background-image:url('/assets/theme-fort-camp.png')}
+.node-1{left:52%;top:86%}.node-2{left:51%;top:67%}.node-3{left:53%;top:45%}.node-4{left:54%;top:24%}.node-5{left:58%;top:9%}
+.map-node.completed::after{right:2px;bottom:2px;z-index:2}
+@media(max-height:700px){.map-node,.map-node.active{width:56px;height:56px}}
