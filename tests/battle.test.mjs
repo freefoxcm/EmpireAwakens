@@ -74,6 +74,16 @@ test('defensive towers attack opponents, can be damaged and release their footpr
  other.update(.05);assert.ok(enemyTower.hp<before,'allies attack enemy towers');
  assert.ok(soldier.hp<specs.warrior.hp,'enemy tower returns fire');
 });
+test('tower attacks identify their source for the corresponding guard and stop after destruction',()=>{
+ for(const team of ['ally','enemy']){
+  const b=new Battle(),tower=b.towers.find(t=>t.team===team),targetTeam=team==='ally'?'enemy':'ally';
+  b.next=schedule.length;b.spawn(team==='ally'?'goblin':'warrior',targetTeam,tower.x,tower.y+(team==='ally'?-70:70));
+  b.update(.05);
+  assert.ok(b.events.some(e=>e.towerId===tower.id&&e.ranged),'tower reports its shot');
+  b.events.length=0;tower.hp=0;tower.cooldown=0;b.update(.05);
+  assert.ok(!b.events.some(e=>e.towerId===tower.id),'destroyed tower does not fire');
+ }
+});
 test('both teams prioritize an enemy unit over a nearer tower',()=>{
  const a=new Battle(),archer=a.spawn('archer','ally',100,245),goblin=a.spawn('goblin','enemy',230,245);
  const enemyTower=a.towers.find(t=>t.id==='e1'),towerHp=enemyTower.hp;

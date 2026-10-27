@@ -14,7 +14,7 @@ export const specs:Record<Kind,Spec> = {
 };
 export interface Unit { id:number; kind:Kind; team:'ally'|'enemy'; x:number;y:number;hp:number;cooldown:number; flash:number; windup:number; special:number; action:'idle'|'move'|'attack'; actionTime:number; facing:number; lane:0|1 }
 export interface Tower {id:string;team:'ally'|'enemy';x:number;y:number;hp:number;maxHp:number;cooldown:number}
-export type CombatEvent={type:'hit'|'heal'|'death'|'boss'|'spawn'|'towerDown'|'shield';x:number;y:number;fromX?:number;fromY?:number;amount?:number;ranged?:boolean};
+export type CombatEvent={type:'hit'|'heal'|'death'|'boss'|'spawn'|'towerDown'|'shield';x:number;y:number;fromX?:number;fromY?:number;amount?:number;ranged?:boolean;towerId?:string};
 type Spawn = {time:number;kind:Kind; lane:0|1};
 export const schedule:Spawn[] = [
  {time:5,kind:'goblin',lane:0},{time:12,kind:'goblin',lane:1},{time:19,kind:'spider',lane:0},{time:22,kind:'spider',lane:0},
@@ -84,7 +84,7 @@ export class Battle {
  for(const tower of this.towers){
   tower.cooldown-=dt;if(tower.hp<=0||tower.cooldown>0)continue;
   const target=this.units.filter(u=>u.hp>0&&u.team!==tower.team&&distance(u,tower)<RULES.towerRange).sort((a,b)=>distance(a,tower)-distance(b,tower))[0];
-  if(target){target.hp-=14;target.flash=.18;tower.cooldown=1.1;this.events.push({type:'hit',x:target.x,y:target.y,fromX:tower.x,fromY:tower.y,amount:14,ranged:true})}
+  if(target){target.hp-=14;target.flash=.18;tower.cooldown=1.1;this.events.push({type:'hit',x:target.x,y:target.y,fromX:tower.x,fromY:tower.y,amount:14,ranged:true,towerId:tower.id})}
  }
  while(this.next<schedule.length&&this.time>=schedule[this.next].time)this.pendingSpawns.push(schedule[this.next++]);
  // One shared spawn point just in front of the enemy base; defer when occupied.
