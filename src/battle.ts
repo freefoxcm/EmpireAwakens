@@ -1,5 +1,6 @@
 import { MAP, isWalkable } from './geometry.ts';
-export type Kind = 'warrior'|'archer'|'lancer'|'monk'|'goblin'|'spider'|'shaman'|'troll';
+import { LEVELS, type Level, type Spawn } from './levels.ts';
+export type Kind = 'warrior'|'archer'|'lancer'|'monk'|'goblin'|'spider'|'shaman'|'troll'|'bat'|'batBoss'|'bear'|'minotaur'|'hexBoss'|'gnoll'|'skull'|'spear';
 export const RULES={vision:180,healVision:200,towerRange:125,energyRegen:.6,bossTime:88,bossRadius:95,bossWindup:1.4,maxAllies:10,spawnSafetyRadius:26} as const;
 type Spec = { name:string; hp:number; speed:number; damage:number; range:number; interval:number; cost:number; size:number };
 export const specs:Record<Kind,Spec> = {
@@ -10,24 +11,28 @@ export const specs:Record<Kind,Spec> = {
  goblin:{name:'哥布林',hp:110,speed:40,damage:18,range:27,interval:1,cost:0,size:256},
  spider:{name:'蜘蛛',hp:75,speed:62,damage:16,range:24,interval:0.8,cost:0,size:192},
  shaman:{name:'萨满',hp:110,speed:30,damage:20,range:125,interval:1.4,cost:0,size:192},
- troll:{name:'巨魔',hp:1350,speed:24,damage:46,range:38,interval:1.35,cost:0,size:384}
+ troll:{name:'巨魔',hp:1350,speed:24,damage:46,range:38,interval:1.35,cost:0,size:384},
+ bat:{name:'蝙蝠',hp:75,speed:58,damage:14,range:26,interval:.9,cost:0,size:192},
+ batBoss:{name:'巨蝙蝠',hp:1250,speed:30,damage:38,range:36,interval:1.25,cost:0,size:192},
+ bear:{name:'狂暴巨熊',hp:1500,speed:28,damage:42,range:36,interval:1.2,cost:0,size:256},
+ minotaur:{name:'牛头人',hp:1800,speed:26,damage:48,range:40,interval:1.25,cost:0,size:320},
+ hexBoss:{name:'咒术萨满',hp:1300,speed:26,damage:32,range:125,interval:1.3,cost:0,size:192},
+ gnoll:{name:'豺狼人',hp:105,speed:34,damage:19,range:110,interval:1.3,cost:0,size:192},
+ skull:{name:'骷髅',hp:95,speed:48,damage:17,range:27,interval:.9,cost:0,size:192},
+ spear:{name:'长矛哥布林',hp:130,speed:38,damage:21,range:40,interval:1,cost:0,size:256}
 };
-export interface Unit { id:number; kind:Kind; team:'ally'|'enemy'; x:number;y:number;hp:number;cooldown:number; flash:number; windup:number; special:number; action:'idle'|'move'|'attack'; actionTime:number; facing:number; lane:0|1 }
+export interface Unit { id:number; kind:Kind; team:'ally'|'enemy'; x:number;y:number;hp:number;cooldown:number; flash:number; windup:number; special:number; action:'idle'|'move'|'attack'; actionTime:number; facing:number; lane:0|1; specialX?:number; specialY?:number }
 export interface Tower {id:string;team:'ally'|'enemy';x:number;y:number;hp:number;maxHp:number;cooldown:number}
 export type CombatEvent={type:'hit'|'heal'|'death'|'boss'|'spawn'|'towerDown'|'shield';x:number;y:number;fromX?:number;fromY?:number;amount?:number;ranged?:boolean;towerId?:string};
-type Spawn = {time:number;kind:Kind; lane:0|1};
-export const schedule:Spawn[] = [
- {time:5,kind:'goblin',lane:0},{time:12,kind:'goblin',lane:1},{time:19,kind:'spider',lane:0},{time:22,kind:'spider',lane:0},
- {time:30,kind:'goblin',lane:1},{time:33,kind:'shaman',lane:1},{time:40,kind:'spider',lane:0},{time:43,kind:'spider',lane:1},
- {time:54,kind:'goblin',lane:0},{time:58,kind:'shaman',lane:0},{time:63,kind:'goblin',lane:1},{time:68,kind:'spider',lane:1},
- {time:RULES.bossTime,kind:'troll',lane:0},{time:95,kind:'spider',lane:1},{time:103,kind:'goblin',lane:1},{time:111,kind:'shaman',lane:0}
-];
+export const schedule:Spawn[]=LEVELS[0].waves;
 const distance=(a:{x:number;y:number},b:{x:number;y:number})=>Math.hypot(a.x-b.x,a.y-b.y);
 export class Battle {
+ readonly level:Level;
+ constructor(level:Level=LEVELS[0]){this.level=level}
  towers:Tower[]=[{id:'a1',team:'ally',x:MAP.bridges[0],y:MAP.allyTowerY,hp:350,maxHp:350,cooldown:0},{id:'a2',team:'ally',x:MAP.bridges[1],y:MAP.allyTowerY,hp:350,maxHp:350,cooldown:0},{id:'e1',team:'enemy',x:MAP.bridges[0],y:MAP.enemyTowerY,hp:250,maxHp:250,cooldown:0},{id:'e2',team:'enemy',x:MAP.bridges[1],y:MAP.enemyTowerY,hp:250,maxHp:250,cooldown:0}];
  units:Unit[]=[]; pendingSpawns:Spawn[]=[]; events:CombatEvent[]=[]; time=0; energy=7; base=600; maxBase=600; enemyBase=700; maxEnemyBase=700; bossSpawned=false; bossDefeated=false; shieldLethalPending=false; selected:Kind='warrior'; status:'playing'|'paused'|'won'|'lost'='playing'; next=0; id=0; message='选择卡牌，再点击金色虚线范围'; messageTime=5;
  walkable(x:number,y:number,team?:'ally'|'enemy'){return isWalkable(x,y)&&!(team==='ally'&&Math.hypot(x-MAP.spawnX,y-MAP.spawnY)<RULES.spawnSafetyRadius)&&!this.towers.some(t=>t.hp>0&&Math.hypot(t.x-x,t.y-y)<32)}
- spawn(kind:Kind,team:'ally'|'enemy',x:number,y:number,lane:0|1=x<MAP.campX?0:1){const u:Unit={id:++this.id,kind,team,x,y,hp:specs[kind].hp,cooldown:0,flash:0,windup:0,special:kind==='troll'?2:7,action:'idle',actionTime:0,facing:team==='ally'?1:-1,lane};this.units.push(u);return u}
+ spawn(kind:Kind,team:'ally'|'enemy',x:number,y:number,lane:0|1=x<MAP.campX?0:1){const u:Unit={id:++this.id,kind,team,x,y,hp:specs[kind].hp,cooldown:0,flash:0,windup:0,special:kind===this.level.boss?2:7,action:'idle',actionTime:0,facing:team==='ally'?1:-1,lane};this.units.push(u);return u}
  placementProblem(x:number,y:number):string|null{
   if(this.status!=='playing')return '战斗未进行';
   if(x<MAP.deployLeft||x>MAP.deployRight||y<MAP.deployTop||y>MAP.deployBottom||!isWalkable(x,y))return '请在金色虚线范围内部署';
@@ -86,15 +91,43 @@ export class Battle {
   const target=this.units.filter(u=>u.hp>0&&u.team!==tower.team&&distance(u,tower)<RULES.towerRange).sort((a,b)=>distance(a,tower)-distance(b,tower))[0];
   if(target){target.hp-=14;target.flash=.18;tower.cooldown=1.1;this.events.push({type:'hit',x:target.x,y:target.y,fromX:tower.x,fromY:tower.y,amount:14,ranged:true,towerId:tower.id})}
  }
- while(this.next<schedule.length&&this.time>=schedule[this.next].time)this.pendingSpawns.push(schedule[this.next++]);
+ while(this.next<this.level.waves.length&&this.time>=this.level.waves[this.next].time)this.pendingSpawns.push(this.level.waves[this.next++]);
  // One shared spawn point just in front of the enemy base; defer when occupied.
  if(this.pendingSpawns.length&&this.walkable(MAP.spawnX,MAP.spawnY)&&!this.units.some(u=>u.hp>0&&Math.hypot(u.x-MAP.spawnX,u.y-MAP.spawnY)<(u.team==='enemy'?30:24))){
   const e=this.pendingSpawns.shift()!;this.spawn(e.kind,'enemy',MAP.spawnX,MAP.spawnY,e.lane);
   this.events.push({type:'spawn',x:MAP.spawnX,y:MAP.spawnY});
-  if(e.kind==='troll'){this.bossSpawned=true;this.notice('首领来袭！击败它解除主城护盾');}
+  if(e.kind===this.level.boss){this.bossSpawned=true;this.notice(`${this.level.bossName}来袭！击败首领解除主城护盾`);}
  }
  for(const u of this.units){if(u.hp<=0)continue;const s=specs[u.kind];u.cooldown-=dt;u.flash=Math.max(0,u.flash-dt);u.actionTime=Math.max(0,u.actionTime-dt);u.action='idle';
- if(u.kind==='troll'){u.special-=dt;if(u.windup>0){u.action='attack';u.windup-=dt;if(u.windup<=0){for(const a of this.units)if(a.team==='ally'&&a.hp>0&&distance(a,u)<95){a.hp-=80;a.flash=.2;this.events.push({type:'hit',x:a.x,y:a.y,amount:80})}for(const t of this.towers)if(t.team==='ally'&&t.hp>0&&distance(t,u)<95){t.hp=Math.max(0,t.hp-80);this.events.push({type:'hit',x:t.x,y:t.y,amount:80})}if(distance(u,{x:MAP.baseX,y:MAP.baseY})<MAP.baseKeepOut+60)this.base-=80;this.events.push({type:'boss',x:u.x,y:u.y});u.special=9}continue}if(u.special<=0&&(this.units.some(a=>a.team==='ally'&&a.hp>0&&distance(a,u)<RULES.bossRadius+20)||this.towers.some(t=>t.team==='ally'&&t.hp>0&&distance(t,u)<RULES.bossRadius+20)||distance(u,{x:MAP.baseX,y:MAP.baseY})<MAP.baseKeepOut+60)){u.windup=RULES.bossWindup;this.notice('巨魔正在蓄力，避开红色范围！');continue}}
+ if(u.kind===this.level.boss&&u.team==='enemy'){
+  u.special-=dt;
+  if(u.windup>0){
+   u.action='attack';u.windup-=dt;
+   if(u.windup<=0){
+    const x=u.specialX??u.x,y=u.specialY??u.y;
+    if(u.kind==='batBoss'){
+     for(const [dx,dy] of [[-38,0],[38,0],[0,38],[0,-38]]){
+      const px=u.x+dx,py=u.y+dy;
+      if(this.walkable(px,py,'enemy')&&!this.units.some(v=>v.hp>0&&Math.hypot(v.x-px,v.y-py)<30)){this.spawn('bat','enemy',px,py,u.lane);this.events.push({type:'spawn',x:px,y:py});if(this.units.filter(v=>v.kind==='bat'&&v.team==='enemy'&&distance(v,u)<75).length>=2)break}
+     }
+    }else{
+     if(u.kind==='bear'||u.kind==='minotaur'){for(let i=0;i<18;i++)this.move(u,x,y,.06)}
+     const center=u.kind==='hexBoss'?{x,y}:u;const radius=u.kind==='hexBoss'?60:95;
+     for(const a of this.units)if(a.team==='ally'&&a.hp>0&&distance(a,center)<radius){a.hp-=u.kind==='hexBoss'?65:80;a.flash=.2;this.events.push({type:'hit',x:a.x,y:a.y,amount:u.kind==='hexBoss'?65:80})}
+     for(const t of this.towers)if(t.team==='ally'&&t.hp>0&&distance(t,center)<radius){t.hp=Math.max(0,t.hp-80);this.events.push({type:'hit',x:t.x,y:t.y,amount:80})}
+     if(distance(center,{x:MAP.baseX,y:MAP.baseY})<MAP.baseKeepOut+radius-35)this.base-=80;
+     this.events.push({type:'boss',x:center.x,y:center.y});
+    }
+    u.special=9;
+   }
+   continue;
+  }
+  const targets=[...this.units.filter(a=>a.team==='ally'&&a.hp>0),...this.towers.filter(t=>t.team==='ally'&&t.hp>0)];
+  const target=targets.filter(a=>distance(a,u)<(u.kind==='hexBoss'?180:115)).sort((a,b)=>distance(a,u)-distance(b,u))[0];
+  if(u.special<=0&&(u.kind==='batBoss'||target||distance(u,{x:MAP.baseX,y:MAP.baseY})<MAP.baseKeepOut+60)){
+   u.specialX=target?.x??u.x;u.specialY=target?.y??u.y;u.windup=RULES.bossWindup;this.notice(`${this.level.bossName}正在施展${this.level.skill}！`);continue
+  }
+ }
  if(u.kind==='monk'){const injured=this.units.filter(v=>v.team==='ally'&&v.hp>0&&v.hp<specs[v.kind].hp&&v.id!==u.id&&distance(u,v)<=RULES.healVision).sort((a,b)=>distance(u,a)-distance(u,b))[0];
  if(injured){if(distance(u,injured)<=s.range){if(u.cooldown<=0)this.attack(u,injured)}else if(this.move(u,injured.x,injured.y,dt))u.action='move'}
  else{const ally=this.units.filter(v=>v.team==='ally'&&v.hp>0&&v.kind!=='monk').sort((a,b)=>distance(u,a)-distance(u,b))[0];
@@ -122,7 +155,7 @@ export class Battle {
      const previous=this.enemyBase;this.enemyBase=Math.max(minimum,this.enemyBase-s.damage);applied=previous-this.enemyBase;
      if(!this.bossDefeated&&previous-s.damage<=0)this.shieldLethalPending=true;
      if(!this.bossDefeated&&this.enemyBase===1&&(previous>1||this.messageTime<=0)){
-      this.notice('主城受到护盾保护，击败巨魔后解除');this.events.push({type:'shield',x:MAP.campX,y:MAP.campY+25});
+      this.notice('主城受到护盾保护，击败首领后解除');this.events.push({type:'shield',x:MAP.campX,y:MAP.campY+25});
      }
     }
     u.cooldown=s.interval;u.actionTime=.45;u.facing=base.x<u.x?-1:1;
@@ -134,15 +167,12 @@ export class Battle {
  }
  for(const u of this.units)if(u.hp<=0){
   this.events.push({type:'death',x:u.x,y:u.y});
-  if(u.kind==='troll'&&u.team==='enemy'){
+  if(u.kind===this.level.boss&&u.team==='enemy'){
    this.bossDefeated=true;
-   if(this.shieldLethalPending&&this.enemyBase===1){
-    this.enemyBase=0;this.events.push({type:'hit',x:MAP.campX,y:MAP.campY+25,amount:1});
-    this.notice('巨魔已被击败，主城护盾破裂！');
-   }else this.notice('巨魔已被击败，主城护盾解除！');
+   this.shieldLethalPending=false;this.notice(`${this.level.bossName}已被击败，主城护盾解除！`);
   }
  }
- this.units=this.units.filter(u=>u.hp>0);if(this.base<=0){this.base=0;this.status='lost'}else if(this.enemyBase<=0||(this.bossDefeated&&this.next===schedule.length&&this.pendingSpawns.length===0&&!this.units.some(u=>u.team==='enemy')))this.status='won';
+ this.units=this.units.filter(u=>u.hp>0);if(this.base<=0){this.base=0;this.status='lost'}else if(this.bossDefeated&&this.enemyBase<=0)this.status='won';
  }
 }
 

@@ -94,3 +94,30 @@
  .enemy-base-stat span{font-size:9px}
  .enemy-base-stat strong{font-size:10px;margin-left:3px}
 }
+
+/* Campaign overlays retain the battle frame's responsive footprint. */
+.arena{position:relative}
+.campaign-screen{position:absolute;inset:0;z-index:10;overflow:hidden;color:#fff2d5;image-rendering:pixelated}
+.title-screen{display:flex;align-items:center;justify-content:center;text-align:center;background:linear-gradient(#1029229c,#1a2925aa),url('/assets/campaign-map.png') center/cover}
+.title-content{width:90%;padding:28px 15px;border:3px solid #d3b27d;border-radius:7px;background:#47372be8 url('/assets/wood-panel.png') center/100% 100% no-repeat;box-shadow:0 8px 20px #14221baa}
+.campaign-kicker{font:700 9px Arial;letter-spacing:.18em;color:#f1d49d}
+.title-content h1{margin:20px 0;color:#ffe9b0;text-shadow:0 3px #503223,2px 4px #2d241c;font-size:clamp(25px,6vw,42px);line-height:1.4;letter-spacing:.08em}
+.title-content h1 em{font-style:normal;color:#a8e6d4;font-size:.72em}
+.title-subtitle{margin:0 0 24px;font-size:12px;color:#ffe7bc}
+.campaign-button,.map-back{border:0;color:#fff7dc;font-weight:bold;text-shadow:0 2px #294e50;background:url('/assets/ribbon-blue.png') center/100% 100% no-repeat;min-height:48px;padding:0 32px 8px;touch-action:manipulation}
+.campaign-button{min-width:180px;font-size:15px}.campaign-button:focus-visible,.map-node:focus-visible,.map-back:focus-visible{outline:3px solid #fff3ae;outline-offset:3px}
+.map-screen{display:flex;flex-direction:column;background:#28392e}
+.map-heading{display:flex;align-items:center;justify-content:space-between;flex:none;padding:5px 12px;color:#ffe3a1;font-weight:bold;background:#293c33;border-bottom:3px solid #a88c5b;text-shadow:0 2px #263329}
+.map-back{min-height:38px;padding:0 20px 7px;font-size:12px}
+.map-art{position:relative;flex:1;min-height:0;background:url('/assets/campaign-map.png') center/100% 100% no-repeat}
+.map-nodes{position:absolute;inset:0}
+.map-node{position:absolute;width:42px;height:42px;transform:translate(-50%,-50%);border:3px solid #f2cd7b;border-radius:50%;background:#487b73;color:#fff8dc;font-weight:800;font-size:18px;box-shadow:0 3px #503927,0 4px 6px #0008;text-shadow:0 2px #283c37;touch-action:manipulation}
+.map-node:disabled{background:#514c48;border-color:#8c8068;filter:grayscale(.6);font-size:14px;opacity:.9}.map-node.active{background:#ba783a;border-color:#fff0aa;box-shadow:0 0 0 3px #8e653c,0 3px 8px #000b}
+.node-1{left:52%;top:86%}.node-2{left:52%;top:68%}.node-3{left:58%;top:48%}.node-4{left:55%;top:30%}.node-5{left:56%;top:12%}
+.map-detail{flex:none;text-align:center;padding:6px 12px 8px;background:#3d3429 url('/assets/wood-panel.png') center/100% 100% no-repeat;border-top:3px solid #c5a772;text-shadow:0 2px #34261e}
+.map-detail h2{font-size:19px;color:#ffe6ad;margin:1px 0}.map-detail p{font-size:11px;line-height:1.25;margin:2px 0;color:#f1dbb2}.map-detail #map-region{color:#a9e5d7;font-weight:bold}.map-detail #map-boss{color:#ffc597}
+.map-detail .campaign-button{min-height:42px;font-size:13px}
+.result-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:2px}.modal .result-actions button{min-width:110px;font-size:12px}
+@media(max-height:700px){.title-content{padding:15px}.title-content h1{margin:10px 0;font-size:26px}.title-subtitle{margin-bottom:10px}.map-heading{padding:1px 10px}.map-back{min-height:32px}.map-detail{padding:3px 8px 4px}.map-detail h2{font-size:16px}.map-detail p{font-size:10px}.map-detail .campaign-button{min-height:36px}.map-node{width:36px;height:36px;font-size:15px}}
+@media(orientation:landscape) and (max-height:500px){.map-screen{display:grid;grid-template-columns:minmax(0,1fr) 172px;grid-template-rows:38px 1fr}.map-heading{grid-column:1 / 3}.map-art{height:100%}.map-detail{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border-top:0;border-left:3px solid #c5a772}.map-detail p{margin:5px 0}.title-content{max-width:360px}.modal{padding:10px}}
+.map-node.completed::after{content:"✓";position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;background:#4d9a70;border:1px solid #d9f1c8;color:#fff;font:700 12px/14px Arial}

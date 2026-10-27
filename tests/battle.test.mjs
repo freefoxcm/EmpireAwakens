@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Battle, RULES, schedule, specs } from '../src/battle.ts';
 import { isWalkable, MAP } from '../src/geometry.ts';
+import { LEVELS,loadProgress,loadCompletion,saveProgress } from '../src/levels.ts';
 
 test('lower deployment validates region, energy and occupancy',()=>{
  const b=new Battle();b.deploy(135,200);assert.equal(b.units.length,0);
@@ -47,7 +48,7 @@ test('boss telegraphs and hits nearby units',()=>{
 });
 test('victory and defeat resolve',()=>{
  const loss=new Battle();loss.towers.filter(t=>t.team==='ally').forEach(t=>t.hp=0);loss.base=1;loss.spawn('goblin','enemy',240,565);loss.update(.05);assert.equal(loss.status,'lost');
- const win=new Battle();win.next=schedule.length;win.bossDefeated=true;win.update(.05);assert.equal(win.status,'won');
+ const win=new Battle();win.next=schedule.length;win.bossDefeated=true;win.update(.05);assert.equal(win.status,'playing');win.enemyBase=0;win.update(.05);assert.equal(win.status,'won');
 });
 test('terrain rejects water and both building footprints',()=>{
  assert.equal(isWalkable(240,329),false);assert.equal(isWalkable(135,329),true);
@@ -191,13 +192,52 @@ test('an all-melee siege cannot indefinitely block the boss wave',()=>{
  assert.ok(b.bossDefeated,'the boss can be defeated');
  assert.equal(b.status,'won');
 });
-test('a lethal strike held by the boss shield is applied when the boss dies',()=>{
+test('shielded base requires a new attack after the boss dies',()=>{
  const b=new Battle();b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);
  b.enemyBase=10;b.spawn('archer','ally',135,160);b.update(.05);
  assert.equal(b.enemyBase,1);assert.equal(b.shieldLethalPending,true);assert.equal(b.status,'playing');
  const boss=b.spawn('troll','enemy',300,160);boss.hp=0;b.update(.05);
- assert.equal(b.bossDefeated,true);assert.equal(b.enemyBase,0);assert.equal(b.status,'won');
+ assert.equal(b.bossDefeated,true);assert.equal(b.enemyBase,1);assert.equal(b.status,'playing');
+ for(let i=0;i<40&&b.status==='playing';i++)b.update(.05);
+ assert.equal(b.enemyBase,0);assert.equal(b.status,'won');
  assert.ok(b.events.some(e=>e.type==='hit'&&e.amount===1));
+});
+test('campaign progress is bounded and tolerates unavailable or corrupt storage',()=>{
+ let value='';const storage={getItem:()=>value,setItem:(_k,v)=>{value=v}};
+ assert.equal(loadProgress(storage),1);saveProgress(storage,3);assert.equal(loadProgress(storage),3);
+ saveProgress(storage,99);assert.equal(loadProgress(storage),5);value='{';assert.equal(loadProgress(storage),1);
+ saveProgress(storage,5,5);assert.equal(loadCompletion(storage),5);value='{"completed":9}';assert.equal(loadCompletion(storage),0);
+ assert.equal(loadProgress({getItem(){throw Error('blocked')}}),1);assert.doesNotThrow(()=>saveProgress({setItem(){throw Error('blocked')}},2));
+});
+test('each configured level can finish with a deployed army',()=>{
+ for(const level of LEVELS){
+  const b=new Battle(level);let nextDeploy=0;
+  while(b.status==='playing'&&b.time<240){
+   if(b.time>=nextDeploy){b.selected=Math.floor(nextDeploy/4)%4===0?'lancer':'archer';b.deploy(Math.floor(nextDeploy/4)%2?135:345,480);nextDeploy+=4}
+   b.update(.05);b.events.length=0;
+  }
+  assert.equal(b.status,'won',`${level.name} did not finish`);assert.ok(b.bossSpawned&&b.bossDefeated);assert.equal(b.enemyBase,0);
+ }
+});
+test('every level has its own boss, valid waves, shield, and a fresh battle',()=>{
+ assert.equal(new Set(LEVELS.map(l=>l.boss)).size,5);
+ for(const level of LEVELS){
+  const b=new Battle(level);assert.equal(b.level,level);assert.equal(level.waves.filter(w=>w.kind===level.boss).length,1);
+  b.towers.filter(t=>t.team==='enemy').forEach(t=>t.hp=0);b.enemyBase=1;
+  const boss=b.spawn(level.boss,'enemy',300,160);boss.hp=0;b.update(.05);
+  assert.equal(b.bossDefeated,true);assert.equal(b.status,'playing');assert.equal(b.enemyBase,1);
+  const fresh=new Battle(level);assert.equal(fresh.time,0);assert.equal(fresh.bossDefeated,false);assert.equal(fresh.enemyBase,700);
+ }
+});
+test('each boss telegraphs its skill and performs the configured effect',()=>{
+ for(const level of LEVELS){
+  const b=new Battle(level);b.next=level.waves.length;b.towers.forEach(t=>t.hp=0);
+  const boss=b.spawn(level.boss,'enemy',135,450),ally=b.spawn('warrior','ally',135,500);boss.special=0;
+  b.update(.05);assert.ok(boss.windup>0,level.name);
+  for(let i=0;i<30;i++)b.update(.05);
+  if(level.boss==='batBoss')assert.ok(b.units.some(u=>u.kind==='bat'),level.name);
+  else assert.ok(b.events.some(e=>e.type==='boss'),level.name);
+ }
 });
 test('boss death does not damage the base without a pending lethal strike',()=>{
  const b=new Battle();b.enemyBase=1;const boss=b.spawn('troll','enemy',300,160);boss.hp=0;b.update(.05);
