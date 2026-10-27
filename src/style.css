@@ -57,3 +57,40 @@
 .modal button{height:52px;display:inline-flex;align-items:center;justify-content:center;padding:0 20px 9px;line-height:1.2}
 .hint{top:50.7%;bottom:auto;width:max-content;min-width:min(165px,calc(100% - 24px));max-width:calc(100% - 24px);min-height:38px;display:flex;align-items:center;justify-content:center;padding:8px 24px 15px;line-height:1.2;overflow-wrap:anywhere}
 @media(max-width:600px){.hint{padding:8px 22px 15px}}
+
+/* Respect browser chrome, notches, and the home indicator on touch devices. */
+@media (max-width: 600px), (pointer: coarse) {
+ .shell{
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  padding: max(4px,var(--safe-top)) max(4px,var(--safe-right)) max(4px,var(--safe-bottom)) max(4px,var(--safe-left));
+ }
+ .arena{width:min(440px,calc(100vw - max(4px,var(--safe-left)) - max(4px,var(--safe-right))),calc((100dvh - max(4px,var(--safe-top)) - max(4px,var(--safe-bottom)) - 155px) * 480 / 740));border-width:3px}
+ .battle-clock{grid-template-columns:auto 40px 40px;column-gap:2px;padding:3px}
+ .small-btn{width:40px;height:40px;font-size:14px;touch-action:manipulation}
+ .card,.modal button{touch-action:manipulation}
+ .enemy-base-stat{top:max(8%,58px);width:108px}
+ .modal{max-width:calc(100% - 20px)}
+}
+@media (max-height: 700px) and ((max-width: 600px) or (pointer: coarse)) {
+ .arena{width:min(440px,calc(100vw - max(4px,var(--safe-left)) - max(4px,var(--safe-right))),calc((100dvh - max(4px,var(--safe-top)) - max(4px,var(--safe-bottom)) - 152px) * 480 / 740))}
+ .card{height:68px}
+}
+@media (orientation: landscape) and (max-height: 500px) {
+ .shell{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);padding:max(4px,var(--safe-top)) max(4px,var(--safe-right)) max(4px,var(--safe-bottom)) max(4px,var(--safe-left))}
+ .arena{width:min(calc(100vw - max(4px,var(--safe-left)) - max(4px,var(--safe-right))),calc((100dvh - max(4px,var(--safe-top)) - max(4px,var(--safe-bottom)) - 6px) * 480 / 740 + 172px));display:grid;grid-template-columns:minmax(0,1fr) 172px;align-items:start}
+ .game-frame{border-bottom:0;border-right:3px solid #533d29}
+ .controls{height:100%;border-top:0;padding:8px}
+ .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .card{height:clamp(48px,18dvh,68px)}
+ .instruction{display:none}
+ .wave-stat{padding:3px 4px}
+ .wave-stat span,.wave-stat strong{font-size:9px}
+ .battle-clock{grid-template-columns:auto 40px 40px}
+ .small-btn{width:40px;height:40px}
+ .enemy-base-stat{top:max(12%,54px);width:108px;min-width:0;white-space:nowrap}
+ .enemy-base-stat span{font-size:9px}
+ .enemy-base-stat strong{font-size:10px;margin-left:3px}
+}
