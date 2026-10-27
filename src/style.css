@@ -1,7 +1,7 @@
 :root{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:#fff1d4;background:#101b19;--gold:#e9c886;--ink:#182d28;--cyan:#8fe3dd;font-synthesis:none}
 *{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 50% 5%,#405542,#192a25 55%,#101916)}button{font:inherit;cursor:pointer}
 .shell{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:8px}
-.arena{width:min(440px,calc(100vw - 16px),calc((100dvh - 170px) * 480 / 740));background:#352c25;border:4px solid #5d4930;outline:2px solid #202a20;border-radius:8px;overflow:hidden;box-shadow:0 16px 45px #000a,inset 0 0 0 2px #c6a669}
+.arena{width:min(440px,calc(100vw - 16px),calc((100dvh - 190px) * 480 / 740));background:#352c25;border:4px solid #5d4930;outline:2px solid #202a20;border-radius:8px;overflow:hidden;box-shadow:0 16px 45px #000a,inset 0 0 0 2px #c6a669}
 .game-frame{position:relative;width:100%;aspect-ratio:480/740;overflow:hidden;background:#88a86e;border-bottom:4px solid #533d29}#game{width:100%;height:100%}#game canvas{display:block;touch-action:none}
 .top-hud{position:absolute;left:8px;right:8px;top:7px;display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none}
 .wave-stat,.battle-clock{background:rgba(30,37,29,.87);border:2px solid #a98957;border-radius:5px;box-shadow:0 2px #2e281f;padding:5px 8px;text-shadow:0 2px #1c211b}
@@ -23,7 +23,7 @@
 .energy-row{margin:9px 2px 3px}.energy-label{color:#a7f0e7;letter-spacing:.05em}.energy-row strong{font-size:15px;color:#fff;margin-left:3px}.muted{color:#a8cdc3}
 .energy-track{height:13px;padding:2px;background:#1b2e2c;border:2px solid #b29865;border-radius:4px;box-shadow:0 2px #172b28;overflow:hidden}.energy-track i{background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 2px),#225d6580 calc(10% - 2px),#225d6580 10%),linear-gradient(#bafaf0,#53bfc6)}
 .instruction{margin:6px 0 0;text-align:center;color:#bedbd0;font-size:9px;line-height:1.3}.modal button:focus-visible,.card:focus-visible,.small-btn:focus-visible{outline:3px solid #fff1ae;outline-offset:2px}
-@media(max-height:700px){.arena{width:min(440px,calc(100vw - 16px),calc((100dvh - 135px) * 480 / 740))}.card{height:72px}.controls{padding:5px 9px 7px}.instruction{display:none}.energy-row{margin-top:6px}}
+@media(max-height:700px){.arena{width:min(440px,calc(100vw - 16px),calc((100dvh - 155px) * 480 / 740))}.card{height:72px}.controls{padding:5px 9px 7px}.instruction{display:none}.energy-row{margin-top:6px}}
 @media(max-width:600px){.shell{padding:0}.arena{width:min(calc(100vw - 8px),calc((100dvh - 155px) * 480 / 740));border-width:3px}.card{height:82px}.instruction{font-size:9px}.hint{min-width:165px;font-size:10px}}
 @media(max-width:600px) and (max-height:700px){.arena{width:min(calc(100vw - 8px),calc((100dvh - 125px) * 480 / 740))}.card{height:68px}.instruction{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
@@ -142,3 +142,37 @@
 .node-1{left:52%;top:86%}.node-2{left:51%;top:67%}.node-3{left:53%;top:45%}.node-4{left:54%;top:24%}.node-5{left:58%;top:9%}
 .map-node.completed::after{right:2px;bottom:2px;z-index:2}
 @media(max-height:700px){.map-node,.map-node.active{width:56px;height:56px}}
+
+/* Keep important health indicators outside the battlefield. */
+.battle-status-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:end;margin:0 2px 7px}
+.controls .enemy-base-stat{position:static;transform:none;min-width:0;width:auto;padding:0;background:none;text-align:left;white-space:nowrap}
+.controls .enemy-base-stat span{font-size:10px}
+.controls .enemy-base-stat strong{font-size:11px;margin-left:4px}
+.controls .boss-hud{position:static;width:auto;padding:0;background:none;transform:none}
+.controls .boss-hud .bar{height:9px}
+/* Smaller, short-lived notices remain below the bridges without blocking taps. */
+.hint{top:49.7%;min-height:30px;padding:4px 24px 10px;line-height:1.2}
+@media(max-width:600px){.hint{padding:4px 22px 10px}}
+/* Safari's small viewport avoids letting browser bars cover the controls. */
+@media (max-width:600px), (pointer:coarse){
+ .shell{--game-viewport-height:100vh;min-height:var(--game-viewport-height);padding-top:max(6px,env(safe-area-inset-top,0px));padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+ .arena{width:min(440px,calc(100vw - max(4px,var(--safe-left)) - max(4px,var(--safe-right))),calc((var(--game-viewport-height) - max(6px,var(--safe-top)) - max(12px,var(--safe-bottom)) - 175px) * 480 / 740))}
+ .battle-clock{grid-template-columns:auto 44px 44px}
+ .small-btn{width:44px;height:44px}
+ .wave-stat{padding:4px 5px}
+ .wave-stat span{font-size:9px}
+ .wave-stat strong{font-size:10px;white-space:nowrap}
+ .instruction{display:none}
+}
+@supports(height:100svh){@media (max-width:600px), (pointer:coarse){.shell{--game-viewport-height:100svh}}}
+@media (orientation:landscape) and (max-height:500px){
+ .arena{width:min(calc(100vw - max(4px,var(--safe-left)) - max(4px,var(--safe-right))),calc((var(--game-viewport-height,100dvh) - max(4px,var(--safe-top)) - max(4px,var(--safe-bottom)) - 6px) * 480 / 740 + 172px))}
+ .battle-status-row{grid-template-columns:1fr;gap:4px;margin-bottom:5px}
+ .controls .enemy-base-stat{width:auto}
+ .wave-stat{flex:none}
+ .wave-stat strong{font-size:9px;white-space:nowrap}
+ .battle-clock{column-gap:1px;padding:2px}
+ .battle-clock span{font-size:8px}
+ .battle-clock strong{font-size:14px}
+ .hint{font-size:10px}
+}
