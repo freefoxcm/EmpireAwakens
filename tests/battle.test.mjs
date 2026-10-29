@@ -5,10 +5,11 @@ import { isWalkable, MAP } from '../src/geometry.ts';
 import { LEVELS,loadProgress,loadCompletion,saveProgress } from '../src/levels.ts';
 import { BUILDINGS } from '../src/buildings.ts';
 import { existsSync } from 'node:fs';
+import { simulate,policies } from '../scripts/strategies.mjs';
 
 test('lower deployment validates region, energy and occupancy',()=>{
  const b=new Battle();b.deploy(135,200);assert.equal(b.units.length,0);
- b.deploy(135,500);assert.equal(b.units.length,1);assert.equal(b.energy,4);
+ b.deploy(135,500);assert.equal(b.units.length,1);assert.equal(b.energy,7-specs.warrior.cost);
  b.energy=10;b.deploy(135,500);assert.equal(b.units.length,1);assert.match(b.message,/已有部队/);
  b.status='paused';b.update(1);assert.equal(b.time,0);
 });
@@ -124,7 +125,7 @@ test('waves enter directly in front of the enemy base and keep both lane assignm
  assert.ok(first);assert.equal(first.lane,0);
  assert.ok(Math.hypot(first.x-MAP.spawnX,first.y-MAP.spawnY)<2);
  assert.ok(first.x<MAP.spawnX,'left-lane wave initially moves toward the left bridge');
- b.units=[];b.time=schedule[1].time-.01;b.update(.02);
+ const right=schedule.findIndex(w=>w.lane===1);b.units=[];b.pendingSpawns=[];b.next=right;b.time=schedule[right].time-.01;b.update(.02);
  const second=b.units.find(u=>u.team==='enemy');
  assert.ok(second);assert.equal(second.lane,1);
  assert.ok(Math.hypot(second.x-MAP.spawnX,second.y-MAP.spawnY)<2);
@@ -213,11 +214,7 @@ test('campaign progress is bounded and tolerates unavailable or corrupt storage'
 });
 test('each configured level can finish with a deployed army',()=>{
  for(const level of LEVELS){
-  const b=new Battle(level);let nextDeploy=0;
-  while(b.status==='playing'&&b.time<240){
-   if(b.time>=nextDeploy){b.selected=Math.floor(nextDeploy/3)%2?'monk':'lancer';b.deploy(Math.floor(nextDeploy/3)%2?135:345,480);nextDeploy+=3}
-   b.update(.05);b.events.length=0;
-  }
+  const {battle:b}=simulate(level,policies[0],'normal',240);
   assert.equal(b.status,'won',`${level.name} did not finish`);assert.ok(b.bossSpawned&&b.bossDefeated);assert.equal(b.enemyBase,0);
  }
 });
@@ -273,7 +270,7 @@ test('enemy health and damage scale by level while allies stay unchanged',()=>{
   assert.equal(enemy.maxHp,Math.round(specs.goblin.hp*level.hpMultiplier));assert.equal(ally.maxHp,specs.warrior.hp);
   const before=ally.hp;b.attack(enemy,ally);assert.equal(before-ally.hp,Math.round(specs.goblin.damage*level.damageMultiplier));
  }
- assert.deepEqual(LEVELS.map(l=>l.waves.length),[15,17,19,21,23]);
+ assert.deepEqual(LEVELS.map(l=>l.waves.length),[16,21,24,36,40]);
  assert.equal(BUILDINGS.length,5);assert.equal(new Set(BUILDINGS.map(t=>t.camp)).size,5);assert.equal(new Set(BUILDINGS.map(t=>t.tower)).size,5);
  for(const theme of BUILDINGS)for(const key of [theme.camp,theme.campRuin,theme.tower,theme.ruin])assert.ok(existsSync(new URL(`../public/assets/${key}.png`,import.meta.url)),`missing ${key}`);
 });

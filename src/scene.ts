@@ -4,6 +4,7 @@ import { MAP } from './geometry.ts';
 import { BUILDINGS } from './buildings.ts';
 import { WorldProjection } from './projection.ts';
 import { assetUrl, characterAssets, imageAssets, sheetAssets } from './assets.ts';
+import { SPELLS } from './spells.ts';
 
 export interface SceneHooks {
  battle:()=>Battle;ready:()=>void;progress:(amount:number)=>void;error:()=>void;
@@ -21,6 +22,7 @@ export class BattleScene extends Phaser.Scene {
  private camp!:Phaser.GameObjects.Image;
  private effects=new Set<Phaser.GameObjects.GameObject>();
  private floats=new Map<string,{text:Phaser.GameObjects.Text;amount:number;until:number}>();
+ private zones:{x:number;y:number;radius:number;color:number;until:number}[]=[];
  private failed=false;private initialized=false;private elapsed=0;private paused=false;
  rangeTower:string|null=null;rangeUntil=0;
  constructor(private hooks:SceneHooks){super('battle')}
@@ -42,7 +44,8 @@ export class BattleScene extends Phaser.Scene {
   this.input.on('pointerdown',(pointer:Phaser.Input.Pointer)=>{const p=this.projection.inverse(pointer.x,pointer.y);this.hooks.pointer(p.x,p.y)});
   this.hooks.ready();
  }
- private clearEffects(){for(const effect of this.effects)effect.destroy();this.effects.clear();this.floats.clear();this.tweens.killAll()}
+ private clearEffects(){for(const effect of this.effects)effect.destroy();this.effects.clear();this.floats.clear();this.zones=[];this.tweens.killAll()}
+ towerAt(x:number,y:number){const pos=this.projection.point(x,y);return this.hooks.battle().towers.find(t=>t.hp>0&&this.towers.get(t.id)?.getBounds().contains(pos.x,pos.y))}
  rebuild(){
   if(!this.initialized)return;this.elapsed=0;this.rangeTower=null;this.clearEffects();
   this.actors.forEach(v=>v.destroy());this.actors.clear();this.art.forEach(a=>a.image.destroy());this.art=[];this.towers.clear();this.guards.clear();
@@ -104,11 +107,12 @@ export class BattleScene extends Phaser.Scene {
   for(const tower of b.towers){
    const ally=tower.team==='ally',view=this.towers.get(tower.id)!,key=tower.hp>0?(ally?'tower-ally-rear':theme.tower):(ally?'tower-ally-ruin':theme.ruin);
    this.guards.get(tower.id)!.setVisible(tower.hp>0);
-   if(view.texture.key!==key){view.setTexture(key,tower.hp>0&&!ally?theme.towerFrame:undefined).setDisplaySize((ally?128*.47:tower.hp>0?theme.towerWidth:theme.ruinWidth)*s,(ally?256*.47:tower.hp>0?theme.towerHeight:theme.ruinHeight)*s);if(tower.hp<=0)this.showEvent({type:'towerDown',x:tower.x,y:tower.y})}
+   if(view.texture.key!==key)view.setTexture(key,tower.hp>0&&!ally?theme.towerFrame:undefined).setDisplaySize((ally?128*.47:tower.hp>0?theme.towerWidth:theme.ruinWidth)*s,(ally?256*.47:tower.hp>0?theme.towerHeight:theme.ruinHeight)*s);
    if(tower.hp>0){const pos=p.point(tower.x,tower.y);this.bar(pos.x,pos.y-9*s,48,tower.hp/tower.maxHp,ally?0x62d9d2:0xee8977)}
   }
+  this.zones=this.zones.filter(zone=>zone.until>b.time);for(const zone of this.zones)this.ellipse(zone.x,zone.y,zone.radius,zone.color,.12);
   for(const u of b.units){
-   if(u.windup>0){const aimed=['hexBoss','bear','minotaur'].includes(u.kind),x=aimed?(u.specialX??u.x):u.x,y=aimed?(u.specialY??u.y):u.y,radius=u.kind==='hexBoss'?60:RULES.bossRadius;this.ellipse(x,y,radius,0xffb65d,.23);const pos=p.point(x,y),r=p.radius(radius);this.graphics.lineStyle(3,0xffefc5,.95);this.graphics.beginPath();this.graphics.arc(pos.x,pos.y,Math.min(r.x,r.y)-4,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-u.windup/RULES.bossWindup));this.graphics.strokePath()}
+   if(u.windup>0){const aimed=['hexBoss','bear','minotaur'].includes(u.kind),x=aimed?(u.specialX??u.x):u.x,y=aimed?(u.specialY??u.y):u.y,radius=b.bossSkill(u).radius;this.ellipse(x,y,radius,0xffb65d,.23);const pos=p.point(x,y),r=p.radius(radius);this.graphics.lineStyle(3,0xffefc5,.95);this.graphics.beginPath();this.graphics.arc(pos.x,pos.y,Math.min(r.x,r.y)-4,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-u.windup/RULES.bossWindup));this.graphics.strokePath()}
    this.drawUnit(u);
   }
   const ids=new Set(b.units.map(u=>u.id));for(const [id,actor] of this.actors)if(!ids.has(id)){actor.destroy();this.actors.delete(id)}
@@ -120,16 +124,22 @@ export class BattleScene extends Phaser.Scene {
  showEvent(event:CombatEvent){
   const p=this.projection,s=p.artworkScale,pos=p.point(event.x,event.y),b=this.hooks.battle();
   if(event.type==='spawn'){this.effect('deployment-dust',event.x,event.y+8,64);return}
-  if(event.type==='towerDown'){this.effect('impact-explosion',event.x,event.y,140);this.hooks.event(event);return}
+  if(event.type==='towerDown'){this.effect('impact-explosion',event.x,event.y,140);return}
   if(event.type==='death'){this.effect('deployment-dust',event.x,event.y,46);return}
   if(event.type==='boss'){this.effect('impact-explosion',event.x,event.y,165);return}
   if(event.type==='shield'){this.ellipse(event.x,event.y,35,0x84d9e5,.2);return}
+  if(event.type==='phase'){this.effect('spell-fire',event.x,event.y,100);return}
+  if(event.type==='spell'&&event.spell){
+   this.zones.push({x:event.x,y:event.y,radius:SPELLS[event.spell].radius,color:event.spell==='fireball'?0xffb16b:0xa0edb3,until:b.time+.5});
+   if(event.spell==='fireball'){const fire=this.effect('spell-fire',event.x,event.y,75);fire.y-=90*s;this.tweens.add({targets:fire,y:pos.y,duration:350})}return;
+  }
+  if(event.type==='spellImpact'){this.effect(event.spell==='fireball'?'impact-explosion':'heal-effect',event.x,event.y,event.spell==='fireball'?160:180);return}
   if(event.type==='heal'){this.effect('heal-effect',event.x,event.y,112)}
   else if(event.ranged&&event.fromX!==undefined&&event.fromY!==undefined){
    const tower=b.towers.find(t=>t.id===event.towerId),guard=event.towerId?this.guards.get(event.towerId):undefined;
    let from=p.point(event.fromX,event.fromY);
    if(tower&&guard){from={x:guard.x,y:guard.y};guard.setFlipX(event.x<event.fromX);guard.play(tower.team==='ally'?'archer-attack':'shaman-attack',true)}
-   const source=b.units.find(u=>Math.hypot(u.x-event.fromX!,u.y-event.fromY!)<4),magic=tower?.team==='enemy'||(source&&source.team==='enemy');
+   const source=b.units.find(u=>Math.hypot(u.x-event.fromX!,u.y-event.fromY!)<4),magic=tower?.team==='enemy'||(event.source?event.source!=='archer':source?.team==='enemy');
    const shot=this.track(magic?this.add.sprite(from.x,from.y,'shaman-projectile').play('shaman-projectile').setDisplaySize(40*s,40*s):this.add.image(from.x,from.y,'tower-arrow').setScale(.55*s));
    shot.setDepth(1002).setRotation(Math.atan2(pos.y-from.y,pos.x-from.x));this.tweens.add({targets:shot,x:pos.x,y:pos.y,duration:180,onComplete:()=>{shot.destroy();this.effect('impact-explosion',event.x,event.y,38)}});
   }

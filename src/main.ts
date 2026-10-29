@@ -7,6 +7,7 @@ import { observeViewport } from './projection.ts';
 import { GameAudio } from './audio.ts';
 import { PauseGate, Tutorial, freshTutorial, readPreferences, writePreferences } from './session.ts';
 import { $, cards, cardInfo, hidden, mountUI, text } from './ui.ts';
+import { SPELLS,availableSpells,type SpellKind } from './spells.ts';
 import './style.css';
 
 mountUI();observeViewport($('.shell'));
@@ -16,6 +17,7 @@ const preferences=readPreferences(),audio=new GameAudio(),gate=new PauseGate();l
 audio.muted=preferences.muted;audio.volume=preferences.volume;
 let battle=new Battle(),screen:'title'|'map'|'battle'='title',ready=false,overlayShown=false,dialogOpen=false,tutorialIntro=false;
 let dialogReturn:HTMLElement|null=null;
+let equippedSpell:SpellKind|null=availableSpells(completed)[0]??null,spellSelected=false;
 gate.set('screen',true);gate.sync(battle);
 const savePreferences=()=>{if(!writePreferences(preferences))hidden('#storage-warning',false)};
 savePreferences();
@@ -41,7 +43,7 @@ $('#help').addEventListener('click',()=>openDialog('战斗规则','<p>选择卡�
 function showCard(kind:Kind){const spec=specs[kind];openDialog(spec.name,`<p>${cardInfo[kind]}</p><p>能量 ${spec.cost} · 生命 ${spec.hp}<br>${kind==='monk'?'治疗':'伤害'} ${spec.damage} · 间隔 ${spec.interval} 秒<br>射程 ${spec.range} · 移速 ${spec.speed}</p>`)}
 function select(kind:Kind){
  if(screen!=='battle'||dialogOpen||overlayShown)return;
- battle.selected=kind;if(tutorialIntro&&kind==='warrior'){tutorial.selectWarrior();savePreferences()}audio.play('select');renderHud();
+ spellSelected=false;battle.selected=kind;if(tutorialIntro&&kind==='warrior'){tutorial.selectWarrior();savePreferences()}audio.play('select');renderHud();
 }
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-kind]')){
  let pressTimer:ReturnType<typeof setTimeout>|undefined,startX=0,startY=0,suppressUntil=0;
@@ -64,6 +66,7 @@ window.addEventListener('keydown',event=>{
   const focusable=[...overlay.querySelectorAll<HTMLElement>('button:not([disabled]):not(.hidden),input')];const index=focusable.indexOf(document.activeElement as HTMLElement);if(event.shiftKey&&index<=0){event.preventDefault();focusable.at(-1)?.focus()}else if(!event.shiftKey&&index===focusable.length-1){event.preventDefault();focusable[0]?.focus()}return;
  }
  if(event.key==='Escape'&&dialogOpen){closeDialog();return}if(screen!=='battle'||dialogOpen||overlayShown)return;
+ if(event.key==='Escape'){spellSelected=false;renderHud();return}
  if(event.code==='Space'&&!(event.target instanceof HTMLButtonElement)){event.preventDefault();togglePause()}
  const n=Number(event.key);if(n>=1&&n<=4)select(cards[n-1]);
 });
@@ -73,11 +76,15 @@ function renderMap(){
  $('#map-nodes').innerHTML=LEVELS.map(level=>`<button class="map-node node-${level.id} ${level.id===selectedLevel?'active':''} ${level.id<=completed?'completed':''}" data-level="${level.id}" ${level.id>unlocked?'disabled':''} aria-label="${level.id>unlocked?'未解锁：':level.id<=completed?'已通关：':''}第${level.id}关 ${level.name}"><span class="landmark" aria-hidden="true"></span><span class="node-badge" aria-hidden="true">${level.id>unlocked?'🔒':level.id}</span></button>`).join('');
  document.querySelectorAll<HTMLButtonElement>('[data-level]').forEach(button=>button.addEventListener('click',()=>{selectedLevel=Number(button.dataset.level);renderMap()}));
  const level=LEVELS[selectedLevel-1];text('#map-region',`第 ${level.id} 关 · ${level.region}`);text('#map-level-name',level.name);text('#map-description',level.description);text('#map-boss',`首领：${level.bossName} · ${level.skill}`);$<HTMLButtonElement>('#enter-level').disabled=!ready;
+ const available=availableSpells(completed);hidden('#spell-loadout',false);$('#spell-loadout').innerHTML=available.length?`<span>法术</span><button data-spell="" class="${equippedSpell===null?'active':''}">不装备</button>${available.map(kind=>`<button data-spell="${kind}" class="${equippedSpell===kind?'active':''}" title="${SPELLS[kind].description}">${SPELLS[kind].name} · ${SPELLS[kind].cost}✦</button>`).join('')}`:'通关第一关后解锁法术';
+ document.querySelectorAll<HTMLButtonElement>('[data-spell]').forEach(button=>button.addEventListener('click',()=>{equippedSpell=(button.dataset.spell||null) as SpellKind|null;renderMap()}));
 }
 function startLevel(id:number){
- if(!ready||id>unlocked||id<1)return;selectedLevel=id;battle=new Battle(LEVELS[id-1]);screen='battle';gate.reset();gate.set('background',document.hidden);overlayShown=false;hidden('#result-layer',true);hidden('#title-screen',true);hidden('#map-screen',true);
+ if(!ready||id>unlocked||id<1)return;selectedLevel=id;battle=new Battle(LEVELS[id-1],{spell:equippedSpell});spellSelected=false;screen='battle';gate.reset();gate.set('background',document.hidden);overlayShown=false;hidden('#result-layer',true);hidden('#title-screen',true);hidden('#map-screen',true);
  tutorialIntro=tutorial.begin(id);gate.set('tutorial',tutorialIntro);syncPause();scene.rebuild();syncInteraction();renderHud();
+ if(equippedSpell&&!tutorial.state.spellHint){tutorial.state.spellHint=true;savePreferences();battle.notice('点击能量条旁的法术，再点击战场施放；切换兵种可取消。')}
 }
+$('#spell-action').addEventListener('click',()=>{if(battle.status!=='playing'||!battle.spell)return;spellSelected=!spellSelected;battle.notice(spellSelected?`点击战场施放${SPELLS[battle.spell].name}，再次点击技能取消`:'已取消法术');renderHud()});
 $('#start-game').addEventListener('click',showMap);$('#enter-level').addEventListener('click',()=>startLevel(selectedLevel));$('#restart').addEventListener('click',()=>startLevel(selectedLevel));$('#back-map').addEventListener('click',showMap);
 $('#back-title').addEventListener('click',()=>{screen='title';hidden('#map-screen',true);hidden('#title-screen',false);syncPause();syncInteraction()});
 $('#next-level').addEventListener('click',()=>{selectedLevel=Math.min(LEVELS.length,selectedLevel+1);showMap()});$('#load-retry').addEventListener('click',()=>location.reload());
@@ -89,24 +96,26 @@ function worldInput(x:number,y:number){
   if(battle.id>before){tutorial.deployed();tutorialIntro=false;gate.set('tutorial',false);savePreferences();battle.notice('能量会自动恢复。用前排保护弓手，修士负责治疗。')}syncPause();renderHud();return;
  }
  if(battle.status!=='playing')return;
- const tower=battle.towers.find(t=>t.hp>0&&Math.abs(x-t.x)<34&&y>t.y-75&&y<t.y+20);
+ if(spellSelected){if(battle.castSpell(x,y).ok)spellSelected=false;renderHud();return}
+ const tower=scene.towerAt(x,y);
  if(tower){scene.rangeTower=tower.id;scene.rangeUntil=battle.time+3;battle.notice(`${tower.team==='ally'?'我方':'敌方'}箭塔射程`)}else{scene.rangeTower=null;battle.deploy(x,y)}
 }
 function feedback(event:CombatEvent){
- if(event.type==='heal')audio.play('heal');else if(event.type==='towerDown')audio.play('collapse');else if(event.type==='boss')audio.play('warning');else if(event.type==='hit')audio.play(event.ranged?'shot':'hit');
+ if(event.type==='heal')audio.play('heal');else if(event.type==='towerDown')audio.play('collapse');else if(event.type==='warning'||event.type==='phase')audio.play('warning');else if(event.type==='hit')audio.play(event.ranged?'shot':'hit');
 }
 function renderHud(){
  text('#level-name',battle.level.name);text('#timer',`${String(Math.floor(battle.time/60)).padStart(2,'0')}:${String(Math.floor(battle.time%60)).padStart(2,'0')}`);text('#wave',battle.bossTriggered?(battle.bossDefeated?'首领已击败':'首领来袭'):battle.next<Math.ceil(battle.level.waves.length/3)?'第一波 · 试探':battle.next<Math.ceil(battle.level.waves.length*2/3)?'第二波 · 集结':'第三波 · 猛攻');
  text('#base',`${Math.ceil(battle.base)} / ${battle.maxBase}`);$('#base-bar').style.width=`${battle.base/battle.maxBase*100}%`;text('#enemy-label',battle.bossDefeated?'敌方主城':'首领护盾');text('#enemy-base',`${Math.ceil(battle.enemyBase)} / ${battle.maxEnemyBase}`);$('#enemy-base-bar').style.width=`${battle.enemyBase/battle.maxEnemyBase*100}%`;
  text('#energy',battle.energy.toFixed(1));$('#energy-bar').style.width=`${battle.energy*10}%`;text('#selection',`已选：${specs[battle.selected].name} · ${battle.units.filter(u=>u.team==='ally').length}/${RULES.maxAllies}`);
- for(const button of document.querySelectorAll<HTMLButtonElement>('[data-kind]')){const kind=button.dataset.kind as Kind;button.classList.toggle('selected',kind===battle.selected);button.classList.toggle('poor',battle.energy<specs[kind].cost);button.setAttribute('aria-pressed',String(kind===battle.selected))}
+ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-kind]')){const kind=button.dataset.kind as Kind;button.classList.toggle('selected',!spellSelected&&kind===battle.selected);button.classList.toggle('poor',battle.energy<specs[kind].cost);button.setAttribute('aria-pressed',String(!spellSelected&&kind===battle.selected))}
+ hidden('#spell-action',!battle.spell);if(battle.spell){const spec=SPELLS[battle.spell],button=$<HTMLButtonElement>('#spell-action');button.innerHTML=`${spec.name}<small>${battle.spellCooldown>0?`${Math.ceil(battle.spellCooldown)}秒`:`✦ ${spec.cost}`}</small>`;button.disabled=battle.status!=='playing'||battle.spellCooldown>0||battle.energy<spec.cost;button.classList.toggle('selected',spellSelected);button.setAttribute('aria-pressed',String(spellSelected));button.setAttribute('aria-label',`施放${spec.name}，${spec.cost}能量${battle.spellCooldown>0?'，冷却中':''}`)}
  const boss=battle.units.find(u=>u.kind===battle.level.boss&&u.team==='enemy');hidden('#boss-hud',!boss);if(boss){const percent=Math.max(0,Math.min(100,boss.hp/boss.maxHp*100));$('#boss-bar').style.width=`${percent}%`;$('#boss-hud').setAttribute('aria-valuenow',String(Math.round(percent)))}
  const paused=battle.status==='paused';text('#pause',paused?'▶':'Ⅱ');$('#pause').setAttribute('aria-label',paused?'继续游戏':'暂停游戏');text('#hint',paused&&!tutorialIntro?'战斗已暂停，点击右上方继续':battle.message);$('#hint').classList.toggle('quiet',!paused&&battle.messageTime<=0);
  hidden('#tutorial-coach',!tutorialIntro||screen!=='battle');if(tutorialIntro)text('#tutorial-text',tutorial.introText);
  if(ready){const p=scene.projection,base=p.point(MAP.baseX,MAP.allyTowerY-52);$('.base-stat').style.left=`${base.x}px`;$('.base-stat').style.top=`${base.y}px`;$('#hint').style.top=`${p.point(0,MAP.riverBottom).y+5}px`}
  if(screen==='battle'&&boss&&!tutorial.state.skipped&&!tutorial.state.bossSeen&&!dialogOpen){tutorial.state.bossSeen=true;savePreferences();audio.play('warning');openDialog('首领来袭','<p>先击败首领，才能解除敌方主城的护盾。</p><p>技能蓄力时地面会出现预警。避免继续在危险区域集中部署，用治疗保护承伤部队。</p>')}
  if(screen==='battle'&&(battle.status==='won'||battle.status==='lost')&&!overlayShown){
-  overlayShown=true;const won=battle.status==='won';if(won){completed=Math.max(completed,selectedLevel);unlocked=Math.max(unlocked,Math.min(LEVELS.length,selectedLevel+1));try{saveProgress(localStorage,unlocked,completed)}catch{hidden('#storage-warning',false)}}
+  overlayShown=true;const won=battle.status==='won';if(won){const previous=completed;completed=Math.max(completed,selectedLevel);if(previous===0&&completed>=1&&!equippedSpell)equippedSpell='fireball';unlocked=Math.max(unlocked,Math.min(LEVELS.length,selectedLevel+1));try{saveProgress(localStorage,unlocked,completed)}catch{hidden('#storage-warning',false)}}
   text('#result-title',won?'战斗胜利':'基地已失守');text('#result-text',won?`${battle.level.bossName}已被击败，敌方主城被摧毁。`:'调整部署时机与阵容，再试一次。');hidden('#next-level',!won||selectedLevel===LEVELS.length);hidden('#result-layer',false);syncInteraction();audio.play(won?'win':'loss');$('#restart').focus();
  }
 }
