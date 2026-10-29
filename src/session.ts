@@ -21,4 +21,4 @@ export class Tutorial {
  get introText(){return this.state.selected?'点击下方金色虚线中的空地，部署战士。':'先点击「战士」卡牌，再在战场部署。'}
 }
 
-export type Preferences={muted:boolean;volume:number;tutorial:TutorialState};
+export type Preferences={muted:boolean;volume:number;musicMuted:boolean;musicVolume:number;tutorial:TutorialState};

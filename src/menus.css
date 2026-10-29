@@ -30,6 +30,7 @@
 .settings-toggle input:checked{background:#387f6a}.settings-toggle input:checked::after{transform:translateX(20px)}
 .volume-setting{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;font-size:12px}
 .volume-setting output{color:#ffe4ae;font:700 13px Arial}.volume-setting input{grid-column:1/-1;width:100%;height:26px;margin:0;accent-color:#93d8c1;cursor:pointer}
+.audio-channel .settings-toggle{min-height:44px}.audio-channel+.audio-channel{margin-top:10px;padding-top:8px;border-top:1px solid #c4a56b44}.audio-channel .volume-setting{margin-top:3px}.audio-channel .volume-setting input{height:32px}.menu-section #retry-audio{margin-top:8px}
 .menu-row-action{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:58px;padding:10px 0;border:0;border-bottom:1px solid #c4a56b3d;background:none;text-align:left;color:#fff0ce;font-size:13px}
 .menu-row-action small{display:block;margin-top:4px;color:#d2be98;font-size:10px;line-height:1.4}.menu-row-action>b{font:24px Arial;color:#d8bd81}
 .panel-body .menu-footnote{margin:12px 0 0;color:#d9c49f;font-size:10px;line-height:1.5}

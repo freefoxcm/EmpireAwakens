@@ -1,0 +1,273 @@
+[
+  {
+    "file": "music/battle.mp3",
+    "title": "Army Approaching",
+    "authors": [
+      "Juhani Junkala / SubspaceAudio"
+    ],
+    "sources": [
+      "https://opengameart.org/content/jrpg-pack-5-action"
+    ],
+    "license": "CC0 1.0",
+    "processing": "Fixed gain to approximately -20 LUFS; MP3 128 kbps; original duration retained.",
+    "sha256": "c778da8f7d278d227c00dfc11b8d507fbf881f49d3efcf2fd58db802c67163e4",
+    "bytes": 1988850,
+    "masterFrames": 5478777,
+    "masterSampleRate": 44100,
+    "loopEndSeconds": 124.23530612244897
+  },
+  {
+    "file": "music/boss.mp3",
+    "title": "Epic Boss Battle",
+    "authors": [
+      "Juhani Junkala / SubspaceAudio"
+    ],
+    "sources": [
+      "https://opengameart.org/content/boss-battle-music"
+    ],
+    "license": "CC0 1.0",
+    "processing": "Fixed gain to approximately -20 LUFS; MP3 128 kbps; original duration retained.",
+    "sha256": "1933a7efe058d0b3088292f51f71c08775c53cb33d675082c235281cf5256571",
+    "bytes": 1976311,
+    "masterFrames": 5443201,
+    "masterSampleRate": 44100,
+    "loopEndSeconds": 123.42859410430839
+  },
+  {
+    "file": "music/forest.mp3",
+    "title": "Encounter With The Witches",
+    "authors": [
+      "Juhani Junkala / SubspaceAudio"
+    ],
+    "sources": [
+      "https://opengameart.org/content/jrpg-pack-5-action"
+    ],
+    "license": "CC0 1.0",
+    "processing": "Fixed gain to approximately -20 LUFS; MP3 128 kbps; original duration retained.",
+    "sha256": "3f6764f58ca393716bfd6f2c9b9f28a60e154d81c5df5d14434c049f552f20aa",
+    "bytes": 1817915,
+    "masterFrames": 5007484,
+    "masterSampleRate": 44100,
+    "loopEndSeconds": 113.54839002267573
+  },
+  {
+    "file": "music/menu.mp3",
+    "title": "JRPG Theme",
+    "authors": [
+      "Juhani Junkala / SubspaceAudio"
+    ],
+    "sources": [
+      "https://opengameart.org/content/jrpg-trailer-theme"
+    ],
+    "license": "CC0 1.0",
+    "processing": "Fixed gain to approximately -20 LUFS; MP3 128 kbps; original duration retained.",
+    "sha256": "a3886c4a5c2a2c18e089924b5ebe320eb05db18586fff4b160a8719680302875",
+    "bytes": 1593037,
+    "masterFrames": 4387319,
+    "masterSampleRate": 44100,
+    "loopEndSeconds": 99.48569160997732
+  },
+  {
+    "file": "music/preparation.mp3",
+    "title": "Preparing For Battle",
+    "authors": [
+      "Juhani Junkala / SubspaceAudio"
+    ],
+    "sources": [
+      "https://opengameart.org/content/jrpg-pack-5-action"
+    ],
+    "license": "CC0 1.0",
+    "processing": "Fixed gain to approximately -20 LUFS; MP3 128 kbps; original duration retained.",
+    "sha256": "39bb701a4f8eb57e3d4a692d8696d3f3cb06481039d36c6a0a5a2d706ad4b8f4",
+    "bytes": 879173,
+    "masterFrames": 2419201,
+    "masterSampleRate": 44100,
+    "loopEndSeconds": 54.85716553287982
+  },
+  {
+    "file": "sfx/arrow.mp3",
+    "title": "弓箭发射",
+    "authors": [
+      "artisticdude"
+    ],
+    "sources": [
+      "https://opengameart.org/content/battle-sound-effects"
+    ],
+    "license": "CC0 1.0",
+    "processing": "使用独立弓弦发射素材，区分近战与法术。 MP3 96 kbps.",
+    "sha256": "b0fe84cb22469c6dd99463c7513259c10af1415765f81764ac67879ad2624be3",
+    "bytes": 7334
+  },
+  {
+    "file": "sfx/attack-1.mp3",
+    "title": "近战攻击 A",
+    "authors": [
+      "artisticdude",
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/battle-sound-effects",
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "挥击与短促的实体命中组合。 MP3 96 kbps.",
+    "sha256": "3bd1841cdae0b3e0f0f000157cc04eed32a646a36695e3fb571e14c5e44eac40",
+    "bytes": 5456
+  },
+  {
+    "file": "sfx/attack-2.mp3",
+    "title": "近战攻击 B",
+    "authors": [
+      "artisticdude",
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/battle-sound-effects",
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "保留少量金属碰撞，作为交替变化。 MP3 96 kbps.",
+    "sha256": "e679ed8e6173de9d578cb13233de463b4ac8e57fd591e706cca3110e23d0cfa6",
+    "bytes": 8590
+  },
+  {
+    "file": "sfx/collapse.mp3",
+    "title": "建筑倒塌",
+    "authors": [
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "木材破裂与延迟碎石组合，和爆炸区分。 MP3 96 kbps.",
+    "sha256": "cb999df64174c6fbdca2c1b79bd7464780f779fe6c1c18f8b98b20add86ac76a",
+    "bytes": 16111
+  },
+  {
+    "file": "sfx/explosion.mp3",
+    "title": "火球落点爆炸",
+    "authors": [
+      "qubodup / Iwan Gabovitch"
+    ],
+    "sources": [
+      "https://opengameart.org/content/synthesized-explosion"
+    ],
+    "license": "CC0 1.0",
+    "processing": "爆裂主体与短尾音，给技能命中明确反馈。 MP3 96 kbps.",
+    "sha256": "62275ee2f7e8bf048044cdf8e3b3aa87b3af62a1ac895e6e613dda4e0d115242",
+    "bytes": 15177
+  },
+  {
+    "file": "sfx/fire-cast.mp3",
+    "title": "火球施放",
+    "authors": [
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "飞行阶段的短促火焰声，与落点爆炸分开。 MP3 96 kbps.",
+    "sha256": "86bfd99a2a1d0d81ca6df4cbf6e459e697dfb0994741969d07fcbec9cb8e8844",
+    "bytes": 8588
+  },
+  {
+    "file": "sfx/heal-spell.mp3",
+    "title": "范围治疗法术",
+    "authors": [
+      "Julie Damsgaard / Spring Spring"
+    ],
+    "sources": [
+      "https://opengameart.org/content/magic-words-healing-sound-effect"
+    ],
+    "license": "CC0 1.0",
+    "processing": "更完整的恢复音，突出主动法术。 MP3 96 kbps.",
+    "sha256": "fdf415bbed4f9005b396f0be6cf44927bdd19487e76d119b06d37d97a8f1884b",
+    "bytes": 27402
+  },
+  {
+    "file": "sfx/heal.mp3",
+    "title": "修士治疗",
+    "authors": [
+      "Julie Damsgaard / Spring Spring"
+    ],
+    "sources": [
+      "https://opengameart.org/content/magic-words-healing-sound-effect"
+    ],
+    "license": "CC0 1.0",
+    "processing": "较短、较轻的竖琴恢复音，适合重复触发。 MP3 96 kbps.",
+    "sha256": "6a181f65a25275c1c5c2521c5a697a7f98fa8c15f09d390a38cb45ce32f1e70e",
+    "bytes": 10469
+  },
+  {
+    "file": "sfx/loss.mp3",
+    "title": "失败",
+    "authors": [
+      "Kenney"
+    ],
+    "sources": [
+      "https://opengameart.org/content/85-short-music-jingles"
+    ],
+    "license": "CC0 1.0",
+    "processing": "jingles_PIZZA01.ogg; level adjusted; MP3 96 kbps.",
+    "sha256": "d7ca08a9eb95733b3b48ba2fdb205afe5b1c725041d10f787f5f77ec7b7b5736",
+    "bytes": 12897
+  },
+  {
+    "file": "sfx/magic.mp3",
+    "title": "怪物远程法术",
+    "authors": [
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "敌方法术弹体的备选声音。 MP3 96 kbps.",
+    "sha256": "8b13eedae0aa5373283de368be8e262497df82f8bdb2292669190e7b16a44b21",
+    "bytes": 8594
+  },
+  {
+    "file": "sfx/select.mp3",
+    "title": "卡牌选择",
+    "authors": [
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "item_gem_02.ogg; level adjusted; MP3 96 kbps.",
+    "sha256": "5b491934b092a6cab0eb34ef3712835f7a4e57d9e79577f2f4e947225ae05fe0",
+    "bytes": 3179
+  },
+  {
+    "file": "sfx/warning.mp3",
+    "title": "首领预警",
+    "authors": [
+      "rubberduck"
+    ],
+    "sources": [
+      "https://opengameart.org/content/80-cc0-rpg-sfx"
+    ],
+    "license": "CC0 1.0",
+    "processing": "creature_roar_02.ogg; level adjusted; MP3 96 kbps.",
+    "sha256": "29c817179296f21c6a35e605b4364813ea67ad54e5916537662f912cdf415468",
+    "bytes": 13210
+  },
+  {
+    "file": "sfx/win.mp3",
+    "title": "胜利",
+    "authors": [
+      "Kenney"
+    ],
+    "sources": [
+      "https://opengameart.org/content/85-short-music-jingles"
+    ],
+    "license": "CC0 1.0",
+    "processing": "jingles_PIZZA02.ogg; level adjusted; MP3 96 kbps.",
+    "sha256": "44084ad15acf9a55af0607b897c389db604252da89fb282501fb740074f004ff",
+    "bytes": 12270
+  }
+]

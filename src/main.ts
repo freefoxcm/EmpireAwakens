@@ -5,6 +5,7 @@ import { LEVELS } from './levels.ts';
 import { BattleScene } from './scene.ts';
 import { observeViewport } from './projection.ts';
 import { GameAudio } from './audio.ts';
+import { combatSound,soundtrack } from './audio-events.ts';
 import { PauseGate, Tutorial, freshTutorial } from './session.ts';
 import { $, cards, hidden, mountUI, text } from './ui.ts';
 import { SPELLS,type Difficulty } from './spells.ts';
@@ -18,7 +19,7 @@ import './menus.css';
 mountUI();observeViewport($('.shell'));
 let selectedLevel=1,mode:Difficulty='normal',storage:Storage|undefined;try{storage=localStorage}catch{}
 const profile=loadProfile(storage),preferences=profile.settings,audio=new GameAudio(),gate=new PauseGate();let tutorial=new Tutorial(preferences.tutorial);
-audio.muted=preferences.muted;audio.volume=preferences.volume;
+audio.muted=preferences.muted;audio.volume=preferences.volume;audio.musicMuted=preferences.musicMuted;audio.musicVolume=preferences.musicVolume;
 let battle=new Battle(),screen:'title'|'map'|'battle'='title',ready=false,loadFailed=false,overlayShown=false,dialogOpen=false,tutorialIntro=false;
 let dialogReturn:HTMLElement|null=null;
 let dialogBack:(()=>void)|undefined;
@@ -27,7 +28,7 @@ gate.set('screen',true);gate.sync(battle);
 const savePreferences=()=>{if(!saveProfile(storage,profile)){hidden('#storage-warning',false);if(screen==='battle')battle.notice('本局可正常游玩，但浏览器无法保存进度。')}};
 savePreferences();
 
-function syncPause(){gate.sync(battle);audio.setPaused(document.hidden||screen!=='battle'||battle.status==='paused')}
+function syncPause(){gate.sync(battle);audio.setMusic(soundtrack(screen,battle.status));audio.setPaused(document.hidden||dialogOpen||screen==='battle'&&battle.status==='paused')}
 function syncInteraction(){
  for(const selector of ['.battle-header','.game-frame','.controls'])$(selector).inert=screen!=='battle'||dialogOpen||overlayShown;
  $('#title-screen').inert=dialogOpen;$('#map-screen').inert=dialogOpen;
@@ -45,6 +46,9 @@ function settings(){
  openDialog('行军设置',settingsPanel(preferences,screen==='battle'),screen==='battle'?'返回战场':'返回地图','settings');
  $('#mute-sound').addEventListener('change',()=>{preferences.muted=!$<HTMLInputElement>('#mute-sound').checked;text('#sound-state',preferences.muted?'已关闭':'已开启');audio.muted=preferences.muted;audio.stop();savePreferences()});
  $('#sound-volume').addEventListener('input',()=>{const volume=$<HTMLInputElement>('#sound-volume').value;preferences.volume=Number(volume)/100;text('#volume-value',`${volume}%`);audio.volume=preferences.volume;savePreferences()});
+ $('#mute-music').addEventListener('change',()=>{preferences.musicMuted=!$<HTMLInputElement>('#mute-music').checked;text('#music-state',preferences.musicMuted?'已关闭':'已开启');audio.musicMuted=preferences.musicMuted;savePreferences()});
+ $('#music-volume').addEventListener('input',()=>{const volume=$<HTMLInputElement>('#music-volume').value;preferences.musicVolume=Number(volume)/100;text('#music-volume-value',`${volume}%`);audio.musicVolume=preferences.musicVolume;savePreferences()});
+ $('#retry-audio').addEventListener('click',()=>audio.retry());renderAudioStatus();
  const replay=()=>{preferences.tutorial=freshTutorial();tutorial=new Tutorial(preferences.tutorial);mode='normal';savePreferences();startLevel(1)};
  $('#replay-tutorial').addEventListener('click',()=>{if(screen==='battle')confirmBattleAction('重新开始教学？','这会结束本次战斗并重新进入第一关教学，已保存的通关成绩和解锁内容会保留。','开始教学',replay);else{closeDialog();replay()}});
  document.querySelector('#leave-battle')?.addEventListener('click',()=>confirmBattleAction('返回征途地图？','这会结束本次战斗。已保存的星级、成绩与解锁内容会保留。','返回地图',showMap));
@@ -68,7 +72,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-info]').forEach(button=>butt
 function togglePause(){if(screen!=='battle'||dialogOpen||overlayShown||tutorialIntro)return;gate.set('user',!gate.reasons.has('user'));gate.set('background',false);syncPause();renderHud()}
 $('#pause').addEventListener('click',togglePause);
 $('#skip-tutorial').addEventListener('click',()=>{tutorial.skip();tutorialIntro=false;gate.set('tutorial',false);savePreferences();syncPause();renderHud()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&screen==='battle'){gate.set('background',true);syncPause();renderHud()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&screen==='battle')gate.set('background',true);syncPause();renderHud()});
 document.addEventListener('pointerdown',()=>audio.unlock(),{capture:true});
 window.addEventListener('keydown',event=>{
  audio.unlock();
@@ -108,9 +112,11 @@ function worldInput(x:number,y:number){
  if(tower){scene.rangeTower=tower.id;scene.rangeUntil=battle.time+3;battle.notice(`${tower.team==='ally'?'我方':'敌方'}箭塔射程`)}else{scene.rangeTower=null;battle.deploy(x,y)}
 }
 function feedback(event:CombatEvent){
- if(event.type==='heal')audio.play('heal');else if(event.type==='towerDown')audio.play('collapse');else if(event.type==='warning'||event.type==='phase')audio.play('warning');else if(event.type==='spell')audio.play(event.spell==='healing'?'heal':'shot');else if(event.type==='hit')audio.play(event.ranged?'shot':'hit');
+ const cue=combatSound(event,battle.towers);if(cue)audio.play(cue);
 }
+function renderAudioStatus(){if(document.querySelector('#audio-status')){text('#audio-status',`${audio.musicTitle?`随机播放 · ${audio.musicTitle} · `:''}${audio.status}`);hidden('#retry-audio',!audio.failed)}}
 function renderHud(){
+ audio.setMusic(soundtrack(screen,battle.status));if(dialogOpen)renderAudioStatus();
  text('#level-name',battle.level.name);text('#timer',`${String(Math.floor(battle.time/60)).padStart(2,'0')}:${String(Math.floor(battle.time%60)).padStart(2,'0')}`);const waveClock=battle.time-battle.waveDelay,wave=Math.max(1,battle.level.groups.filter(g=>5+(g.time-5)*(battle.mode==='challenge'?.9:1)<=waveClock).length);text('#wave',battle.bossTriggered?(battle.bossDefeated?'攻破敌方主城':'首领来袭'):`第 ${wave} / ${battle.level.groups.length} 波`);
  text('#base',`${Math.ceil(battle.base)} / ${battle.maxBase}`);$('#base-bar').style.width=`${battle.base/battle.maxBase*100}%`;text('#enemy-label',battle.bossDefeated?'敌方主城':'首领护盾');text('#enemy-base',`${Math.ceil(battle.enemyBase)} / ${battle.maxEnemyBase}`);$('#enemy-base-bar').style.width=`${battle.enemyBase/battle.maxEnemyBase*100}%`;
  text('#energy',battle.energy.toFixed(1));$('#energy-bar').style.width=`${battle.energy*10}%`;text('#selection',`已选：${specs[battle.selected].name} · ${battle.units.filter(u=>u.team==='ally').length}/${RULES.maxAllies}`);
@@ -123,10 +129,11 @@ function renderHud(){
  if(screen==='battle'&&mode==='normal'&&battle.level.id===1&&boss&&!tutorial.state.skipped&&!tutorial.state.bossSeen&&!dialogOpen){tutorial.state.bossSeen=true;savePreferences();audio.play('warning');openDialog('首领来袭','<p>先击败首领，才能解除敌方主城的护盾。</p><p>技能蓄力时地面会出现预警。避免继续在危险区域集中部署，用治疗保护承伤部队。</p>')}
  if(screen==='battle'&&(battle.status==='won'||battle.status==='lost')&&!overlayShown){
   overlayShown=true;const won=battle.status==='won',result=recordVictory(profile,{levelId:selectedLevel,mode,won,time:battle.time,base:battle.base,maxBase:battle.maxBase,towersRemaining:battle.towers.filter(t=>t.team==='ally'&&t.hp>0).length});if(won)savePreferences();
-  renderResult(battle,result.stars,result.rewards,profile);hidden('#result-layer',false);syncInteraction();audio.play(won?'win':'loss');$('#result-actions .panel-primary').focus();
+  renderResult(battle,result.stars,result.rewards,profile);hidden('#result-layer',false);syncInteraction();audio.finish(won);$('#result-actions .panel-primary').focus();
  }
 }
 const scene=new BattleScene({battle:()=>battle,ready:()=>{ready=true;hidden('#load-progress',true);text('#load-status','战场已准备就绪');$<HTMLButtonElement>('#start-game').disabled=false;$<HTMLButtonElement>('#enter-level').disabled=false;syncInteraction();renderHud()},progress:value=>{$<HTMLProgressElement>('#load-progress').value=value;if(!loadFailed)text('#load-status',`准备战场 ${Math.round(value*100)}%`)},error:()=>{loadFailed=true;text('#load-status','部分素材加载失败，请检查网络后重试。');hidden('#load-retry',false)},pointer:worldInput,frame:renderHud,event:feedback});
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'game',width:Math.max(1,$('#game').clientWidth),height:Math.max(1,$('#game').clientHeight),backgroundColor:'#78945c',pixelArt:true,scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.NO_CENTER},scene:[scene]});
 new ResizeObserver(entries=>{const {width,height}=entries[0].contentRect;if(width>0&&height>0&&(Math.round(width)!==game.scale.width||Math.round(height)!==game.scale.height))game.scale.setParentSize(Math.round(width),Math.round(height))}).observe($('#game'));
 syncInteraction();
+import.meta.hot?.dispose(()=>audio.dispose());

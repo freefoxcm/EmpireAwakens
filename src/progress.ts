@@ -8,7 +8,7 @@ export type PlayerProfile={version:2;unlocked:number;completed:number;equippedSp
 export type BattleSummary={levelId:number;mode:Difficulty;won:boolean;time:number;base:number;maxBase:number;towersRemaining:number};
 const integer=(value:unknown,min:number,max:number,fallback:number)=>typeof value==='number'&&Number.isInteger(value)&&value>=min&&value<=max?value:fallback;
 const ratio=(value:unknown,fallback=0)=>typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(1,value)):fallback;
-export const newProfile=():PlayerProfile=>({version:2,unlocked:1,completed:0,equippedSpell:null,records:{normal:{},challenge:{}},settings:{muted:false,volume:.35,tutorial:freshTutorial()}});
+export const newProfile=():PlayerProfile=>({version:2,unlocked:1,completed:0,equippedSpell:null,records:{normal:{},challenge:{}},settings:{muted:false,volume:.35,musicMuted:false,musicVolume:.18,tutorial:freshTutorial()}});
 const parse=(value:string|null)=>{try{return value?JSON.parse(value):null}catch{return null}};
 
 export function loadProfile(storage?:Pick<Storage,'getItem'>):PlayerProfile{
@@ -33,6 +33,7 @@ export function loadProfile(storage?:Pick<Storage,'getItem'>):PlayerProfile{
 }
 function readSettings(profile:PlayerProfile,value:unknown){
  if(!value||typeof value!=='object')return;const settings=value as Partial<Preferences>;profile.settings.muted=settings.muted===true;profile.settings.volume=ratio(settings.volume,.35);
+ profile.settings.musicMuted=typeof settings.musicMuted==='boolean'?settings.musicMuted:profile.settings.muted;profile.settings.musicVolume=ratio(settings.musicVolume,.18);
  const tutorial=settings.tutorial;if(tutorial&&typeof tutorial==='object')for(const key of Object.keys(profile.settings.tutorial) as (keyof Preferences['tutorial'])[])profile.settings.tutorial[key]=tutorial[key]===true;
 }
 export function saveProfile(storage:Pick<Storage,'setItem'>|undefined,profile:PlayerProfile){try{if(!storage)return false;storage.setItem(PROFILE_KEY,JSON.stringify(profile));return true}catch{return false}}

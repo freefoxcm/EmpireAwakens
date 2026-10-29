@@ -49,13 +49,13 @@ export class Battle {
  private resolveSpell(kind:SpellKind,x:number,y:number){
   const radius=SPELLS[kind].radius;this.events.push({type:'spellImpact',x,y,spell:kind});
   for(const u of this.units){if(u.hp<=0||Math.hypot(u.x-x,u.y-y)>radius)continue;
-   if(kind==='fireball'&&u.team==='enemy'){u.hp-=140;u.flash=.18;this.events.push({type:'hit',x:u.x,y:u.y,amount:140})}
+   if(kind==='fireball'&&u.team==='enemy'){u.hp-=140;u.flash=.18;this.events.push({type:'hit',x:u.x,y:u.y,amount:140,spell:kind})}
    if(kind==='healing'&&u.team==='ally'){const amount=Math.min(70,u.maxHp-u.hp);u.hp+=amount;if(amount)this.events.push({type:'heal',x:u.x,y:u.y,amount,spell:kind})}
   }
   if(kind==='fireball'){
-   for(const tower of this.towers)if(tower.team==='enemy'&&tower.hp>0&&Math.hypot(tower.x-x,tower.y-y)<=radius){const amount=Math.min(49,tower.hp);tower.hp-=amount;this.events.push({type:'hit',x:tower.x,y:tower.y,amount})}
+   for(const tower of this.towers)if(tower.team==='enemy'&&tower.hp>0&&Math.hypot(tower.x-x,tower.y-y)<=radius){const amount=Math.min(49,tower.hp);tower.hp-=amount;this.events.push({type:'hit',x:tower.x,y:tower.y,amount,spell:kind})}
    // Boss death is resolved after this impact, so a single blast cannot bypass its shield.
-   if(Math.hypot(MAP.campX-x,MAP.campY-y)<=radius){const amount=this.hitEnemyBase(49);if(amount)this.events.push({type:'hit',x:MAP.campX,y:MAP.campY,amount})}
+   if(Math.hypot(MAP.campX-x,MAP.campY-y)<=radius){const amount=this.hitEnemyBase(49);if(amount)this.events.push({type:'hit',x:MAP.campX,y:MAP.campY,amount,spell:kind})}
   }
  }
  private hitEnemyBase(damage:number){

@@ -32,3 +32,11 @@ test('defeat and invalid levels never replace progress or scores',()=>{
 test('settings, deliberate unequip and tutorial milestones survive a reload',()=>{
  const p=newProfile(),storage=memory();recordVictory(p,summary());p.equippedSpell=null;p.settings.volume=.8;p.settings.muted=true;p.settings.tutorial.selected=true;p.settings.tutorial.deployed=true;saveProfile(storage,p);assert.deepEqual(loadProfile(storage),p);
 });
+
+test('existing saves gain music controls while retaining a previous deliberate mute',()=>{
+ for(const muted of [false,true]){
+  const p=loadProfile(memory({[PROFILE_KEY]:JSON.stringify({version:2,unlocked:3,completed:2,settings:{muted,volume:.6}})}));
+  assert.equal(p.settings.muted,muted);assert.equal(p.settings.musicMuted,muted);assert.equal(p.settings.musicVolume,.18);assert.equal(p.settings.volume,.6);assert.equal(p.completed,2);
+ }
+ const p=newProfile(),storage=memory();p.settings.musicVolume=.27;p.settings.musicMuted=true;saveProfile(storage,p);assert.deepEqual(loadProfile(storage),p);
+});

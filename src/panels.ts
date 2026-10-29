@@ -4,8 +4,11 @@ import type { Preferences } from './session.ts';
 
 export function settingsPanel(preferences:Preferences,inBattle:boolean){
  return `<section class="menu-section"><h3><span class="menu-icon sound" aria-hidden="true"></span>声音</h3>
+  <div class="audio-channel"><label class="settings-toggle"><span>背景音乐<small id="music-state">${preferences.musicMuted?'已关闭':'已开启'}</small></span><input id="mute-music" type="checkbox" role="switch" aria-label="背景音乐" ${preferences.musicMuted?'':'checked'}></label>
+  <div class="volume-setting"><label for="music-volume">音乐音量</label><output id="music-volume-value" for="music-volume">${Math.round(preferences.musicVolume*100)}%</output><input id="music-volume" aria-label="音乐音量" type="range" min="0" max="100" value="${Math.round(preferences.musicVolume*100)}"></div></div>
+  <div class="audio-channel">
   <label class="settings-toggle"><span>战斗音效<small id="sound-state">${preferences.muted?'已关闭':'已开启'}</small></span><input id="mute-sound" type="checkbox" role="switch" aria-label="战斗音效" ${preferences.muted?'':'checked'}></label>
-  <div class="volume-setting"><label for="sound-volume">音量</label><output id="volume-value" for="sound-volume">${Math.round(preferences.volume*100)}%</output><input id="sound-volume" aria-label="音量" type="range" min="0" max="100" value="${Math.round(preferences.volume*100)}"></div>
+  <div class="volume-setting"><label for="sound-volume">音效音量</label><output id="volume-value" for="sound-volume">${Math.round(preferences.volume*100)}%</output><input id="sound-volume" aria-label="音效音量" type="range" min="0" max="100" value="${Math.round(preferences.volume*100)}"></div></div><p id="audio-status" class="menu-footnote" role="status"></p><button id="retry-audio" class="panel-secondary hidden">重新加载声音</button>
  </section><section class="menu-section"><h3><span class="menu-icon help" aria-hidden="true"></span>战役</h3>
   <button id="replay-tutorial" class="menu-row-action"><span>重看第一关教学<small>通关成绩和解锁内容会保留</small></span><b aria-hidden="true">›</b></button>
   ${inBattle?'<button id="leave-battle" class="menu-row-action"><span>返回征途地图<small>结束本局，调整法术与关卡</small></span><span class="menu-icon back" aria-hidden="true"></span></button>':''}
