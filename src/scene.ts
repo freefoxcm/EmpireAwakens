@@ -124,7 +124,7 @@ export class BattleScene extends Phaser.Scene {
   this.hooks.frame();
  }
  private track<T extends Phaser.GameObjects.GameObject>(object:T){this.effects.add(object);object.once('destroy',()=>this.effects.delete(object));return object}
- private effect(key:string,x:number,y:number,size:number){const point=this.projection.point(x,y),effect=this.track(this.add.sprite(point.x,point.y,key).setDisplaySize(size*this.projection.artworkScale,size*this.projection.artworkScale).setDepth(1002));effect.play(key);effect.once('animationcomplete',()=>effect.destroy());return effect}
+ private effect(key:string,x:number,y:number,size:number,startFrame=0){const point=this.projection.point(x,y),effect=this.track(this.add.sprite(point.x,point.y,key).setDisplaySize(size*this.projection.artworkScale,size*this.projection.artworkScale).setDepth(1002));effect.play({key,startFrame});effect.once('animationcomplete',()=>effect.destroy());return effect}
  showEvent(event:CombatEvent){
   const p=this.projection,s=p.artworkScale,pos=p.point(event.x,event.y),b=this.hooks.battle();
   if(event.type==='spawn'){this.effect('deployment-dust',event.x,event.y+8,64);return}
@@ -134,11 +134,15 @@ export class BattleScene extends Phaser.Scene {
   if(event.type==='shield'){this.ellipse(event.x,event.y,35,0x84d9e5,.2);return}
   if(event.type==='phase'){this.effect('spell-fire',event.x,event.y,100);return}
   if(event.type==='spell'&&event.spell){
-   this.zones.push({x:event.x,y:event.y,radius:SPELLS[event.spell].radius,color:event.spell==='fireball'?0xffb16b:0xa0edb3,until:b.time+.5});
-   if(event.spell==='fireball'){const fire=this.effect('spell-fire',event.x,event.y,75);fire.y-=90*s;this.tweens.add({targets:fire,y:pos.y,duration:350})}return;
+   this.zones.push({x:event.x,y:event.y,radius:SPELLS[event.spell].radius,color:event.spell==='fireball'?0xffb16b:0xa0edb3,until:b.time+.85});
+   if(event.spell==='fireball'){const fire=this.effect('spell-fire',event.x,event.y,108);fire.x-=22*s;fire.y-=Math.max(100*s,75);this.tweens.add({targets:fire,x:pos.x,y:pos.y,duration:350,onComplete:()=>fire.destroy()})}return;
   }
-  if(event.type==='spellImpact'){this.effect(event.spell==='fireball'?'impact-explosion':'heal-effect',event.x,event.y,event.spell==='fireball'?160:180);return}
-  if(event.type==='heal'){this.effect('heal-effect',event.x,event.y,112)}
+  if(event.type==='spellImpact'){
+   // The explosion artwork occupies the middle third of its transparent frame.
+   const healing=event.spell==='healing',effect=this.effect(healing?'heal-effect':'impact-explosion',event.x,event.y,healing?260:400,healing?3:1);
+   effect.anims.timeScale=healing?.55:.6;return;
+  }
+  if(event.type==='heal'){if(!event.spell)this.effect('heal-effect',event.x,event.y,112)}
   else if(event.ranged&&event.fromX!==undefined&&event.fromY!==undefined){
    const tower=b.towers.find(t=>t.id===event.towerId),guard=event.towerId?this.guards.get(event.towerId):undefined;
    let from=p.point(event.fromX,event.fromY);
