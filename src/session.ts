@@ -22,8 +22,3 @@ export class Tutorial {
 }
 
 export type Preferences={muted:boolean;volume:number;tutorial:TutorialState};
-export function readPreferences():Preferences{
- const defaults:Preferences={muted:false,volume:.35,tutorial:freshTutorial()};
- try{const value=JSON.parse(localStorage.getItem('empire-awakens-preferences-v1')||'null');return {...defaults,muted:value?.muted===true,volume:typeof value?.volume==='number'?Math.max(0,Math.min(1,value.volume)):.35,tutorial:{...defaults.tutorial,...value?.tutorial}}}catch{return defaults}
-}
-export function writePreferences(value:Preferences){try{localStorage.setItem('empire-awakens-preferences-v1',JSON.stringify(value));return true}catch{return false}}

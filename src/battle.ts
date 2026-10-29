@@ -55,7 +55,7 @@ export class Battle {
   if(kind==='fireball'){
    for(const tower of this.towers)if(tower.team==='enemy'&&tower.hp>0&&Math.hypot(tower.x-x,tower.y-y)<=radius){const amount=Math.min(49,tower.hp);tower.hp-=amount;this.events.push({type:'hit',x:tower.x,y:tower.y,amount})}
    // Boss death is resolved after this impact, so a single blast cannot bypass its shield.
-   if(Math.hypot(MAP.campX-x,MAP.campY-y)<=radius)this.hitEnemyBase(49);
+   if(Math.hypot(MAP.campX-x,MAP.campY-y)<=radius){const amount=this.hitEnemyBase(49);if(amount)this.events.push({type:'hit',x:MAP.campX,y:MAP.campY,amount})}
   }
  }
  private hitEnemyBase(damage:number){

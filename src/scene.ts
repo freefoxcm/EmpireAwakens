@@ -24,6 +24,7 @@ export class BattleScene extends Phaser.Scene {
  private floats=new Map<string,{text:Phaser.GameObjects.Text;amount:number;until:number}>();
  private zones:{x:number;y:number;radius:number;color:number;until:number}[]=[];
  private failed=false;private initialized=false;private elapsed=0;private paused=false;
+ private reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  rangeTower:string|null=null;rangeUntil=0;
  constructor(private hooks:SceneHooks){super('battle')}
  preload(){
@@ -72,6 +73,9 @@ export class BattleScene extends Phaser.Scene {
   if(!this.initialized)return;this.projection.resize(this.scale.width,this.scale.height);this.clearEffects();
   const p=this.projection,s=p.artworkScale;
   for(const art of this.art){const pos=p.point(art.x,art.y);art.image.setPosition(pos.x,pos.y+(art.offsetY??0)*s).setDisplaySize(art.width*s,art.height*s)}
+  const battle=this.hooks.battle(),theme=BUILDINGS[battle.level.id-1];
+  for(const tower of battle.towers)if(tower.hp<=0){const ally=tower.team==='ally';this.towers.get(tower.id)!.setDisplaySize((ally?128*.47:theme.ruinWidth)*s,(ally?256*.47:theme.ruinHeight)*s)}
+  if(battle.enemyBase<=0)this.camp.setDisplaySize(theme.campRuinWidth*s,theme.campRuinHeight*s);
   this.drawGround();
  }
  private drawGround(){
@@ -147,7 +151,7 @@ export class BattleScene extends Phaser.Scene {
   const key=`${Math.round(event.x/28)}:${Math.round(event.y/28)}:${event.type}`,existing=this.floats.get(key);
   if(existing&&existing.until>b.time){existing.amount+=event.amount;existing.text.setText(`${event.type==='heal'?'+':'−'}${Math.round(existing.amount)}`);return}
   const label=this.track(this.add.text(pos.x,pos.y-35*s,`${event.type==='heal'?'+':'−'}${Math.round(event.amount)}`,{fontFamily:'Arial',fontSize:`${Math.max(10,14*s)}px`,fontStyle:'bold',color:event.type==='heal'?'#a8ffd1':'#fff1d4',stroke:'#24342c',strokeThickness:2}).setOrigin(.5).setDepth(1003));
-  const record={text:label,amount:event.amount,until:b.time+.16};this.floats.set(key,record);this.tweens.add({targets:label,y:label.y-20*s,alpha:0,duration:600,onComplete:()=>{label.destroy();if(this.floats.get(key)===record)this.floats.delete(key)}});
+  const record={text:label,amount:event.amount,until:b.time+.16};this.floats.set(key,record);this.tweens.add({targets:label,y:label.y-(this.reducedMotion?0:20*s),alpha:0,duration:this.reducedMotion?350:600,onComplete:()=>{label.destroy();if(this.floats.get(key)===record)this.floats.delete(key)}});
  }
  private drawUnit(u:Unit){
   let actor=this.actors.get(u.id);if(!actor){actor=this.add.sprite(0,0,u.kind+'-idle');this.actors.set(u.id,actor)}
